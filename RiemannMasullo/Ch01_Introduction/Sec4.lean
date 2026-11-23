@@ -2,6 +2,7 @@ module
 
 public import RiemannMasullo.Ch13_ZerosHecke.Sec3
 public import RiemannMasullo.AppB_AnalyticNT.Sec6
+import Mathlib.Analysis.Calculus.BumpFunction.Normed
 import all RiemannMasullo.Ch10_TraceSpectral.Sec1
 import all RiemannMasullo.AppB_AnalyticNT.Sec4b
 
@@ -237,17 +238,72 @@ Deviation: The paper leaves the mollifier and convolution unspecified. This
 uses ordinary additive convolution in the coordinate `t` with Lebesgue measure
 and encodes the cofinal approximation by sequences. -/
 def IsIntroTraceApproximation (h ρ : ℕ → ℝ → ℝ) : Prop :=
-  (∀ n, ContDiff ℝ ⊤ (h n) ∧ HasCompactSupport (h n) ∧
+  (∀ n, ContDiff ℝ (⊤ : ℕ∞) (h n) ∧ HasCompactSupport (h n) ∧
     tsupport (h n) ⊆ Ioi 1 ∧ ∀ t, h n t ∈ Icc 0 1) ∧
   Monotone h ∧ (∀ t > 1, Tendsto (fun n ↦ h n t) atTop (𝓝 1)) ∧
   ∃ ε : ℕ → ℝ, Tendsto ε atTop (𝓝 0) ∧
-    ∀ n, 0 < ε n ∧ ContDiff ℝ ⊤ (ρ n) ∧ (∀ t, 0 ≤ ρ n t) ∧
+    ∀ n, 0 < ε n ∧ ContDiff ℝ (⊤ : ℕ∞) (ρ n) ∧ (∀ t, 0 ≤ ρ n t) ∧
       tsupport (ρ n) ⊆ Icc (-ε n) (ε n) ∧ (∫ t, ρ n t) = 1
 
 /-- Paper: §1.4.2, pp. 28–29. Smooth bump cutoffs and ordinary mollifiers
 give an approximation sequence with the stated support and convergence. -/
 theorem exists_introTraceApproximation :
-    ∃ h ρ, IsIntroTraceApproximation h ρ := by sorry
+    ∃ h ρ, IsIntroTraceApproximation h ρ := by
+  let ε (n : ℕ) : ℝ := 1 / ((n : ℝ) + 1)
+  have hε (n : ℕ) : 0 < ε n := by
+    dsimp [ε]
+    positivity
+  let b (n : ℕ) : ContDiffBump (0 : ℝ) :=
+    ⟨ε n / 2, ε n, half_pos (hε n), half_lt_self (hε n)⟩
+  let h (n : ℕ) (t : ℝ) := Real.smoothTransition (((n : ℝ) + 1) * (t - 1) - 1) *
+    Real.smoothTransition ((n : ℝ) - t)
+  have hs (n : ℕ) : tsupport (h n) ⊆ Icc (1 + ε n) (n : ℝ) := by
+    apply closure_minimal _ isClosed_Icc
+    intro t ht
+    have hp := mul_ne_zero_iff.mp (show h n t ≠ 0 from ht)
+    have hl := lt_of_not_ge (hp.1 ∘ Real.smoothTransition.zero_of_nonpos)
+    have hr := lt_of_not_ge (hp.2 ∘ Real.smoothTransition.zero_of_nonpos)
+    refine ⟨?_, by linarith⟩
+    have : ε n < t - 1 := by
+      apply (div_lt_iff₀ (by positivity : 0 < (n : ℝ) + 1)).2
+      rw [mul_comm]
+      linarith
+    linarith
+  refine ⟨h, fun n ↦ (b n).normed volume, ?_, ?_, ?_,
+    ε, tendsto_one_div_add_atTop_nhds_zero_nat, ?_⟩
+  · intro n
+    refine ⟨?_, isCompact_Icc.of_isClosed_subset (isClosed_tsupport _) (hs n),
+      fun t ht ↦ lt_of_lt_of_le (lt_add_of_pos_right 1 (hε n)) (hs n ht).1, fun t ↦ ?_⟩
+    · exact (Real.smoothTransition.contDiff.comp (by fun_prop)).mul
+          (Real.smoothTransition.contDiff.comp (by fun_prop))
+    · exact ⟨mul_nonneg (Real.smoothTransition.nonneg _) (Real.smoothTransition.nonneg _),
+        (mul_le_of_le_one_left (Real.smoothTransition.nonneg _)
+          (Real.smoothTransition.le_one _)).trans (Real.smoothTransition.le_one _)⟩
+  · intro m n hmn t
+    have hcast : (m : ℝ) ≤ n := by exact_mod_cast hmn
+    dsimp [h]
+    by_cases ht : 1 ≤ t
+    · have hl := mul_le_mul_of_nonneg_right (show (m : ℝ) + 1 ≤ (n : ℝ) + 1 by linarith) (sub_nonneg.mpr ht)
+      exact mul_le_mul (Real.smoothTransition.monotone (sub_le_sub_right hl 1))
+        (Real.smoothTransition.monotone (sub_le_sub_right hcast t))
+        (Real.smoothTransition.nonneg _) (Real.smoothTransition.nonneg _)
+    · have hz (k : ℕ) : ((k : ℝ) + 1) * (t - 1) - 1 ≤ 0 := by
+        have := mul_nonpos_of_nonneg_of_nonpos (by positivity : 0 ≤ (k : ℝ) + 1)
+          (sub_nonpos.mpr (le_of_not_ge ht))
+        linarith
+      simp [Real.smoothTransition.zero_of_nonpos (hz m), Real.smoothTransition.zero_of_nonpos (hz n)]
+  · intro t ht
+    apply tendsto_const_nhds.congr'
+    have hg : Tendsto (fun n : ℕ ↦ (n : ℝ)) atTop atTop := tendsto_natCast_atTop_atTop
+    filter_upwards [hg.eventually_ge_atTop (2 / (t - 1)), hg.eventually_ge_atTop (t + 1)] with n hn hn'
+    have hmul := (div_le_iff₀ (sub_pos.mpr ht)).mp hn
+    have hl : 1 ≤ ((n : ℝ) + 1) * (t - 1) - 1 := by linarith only [hmul, ht]
+    simp only [h, Real.smoothTransition.one_of_one_le hl,
+      Real.smoothTransition.one_of_one_le (by linarith : 1 ≤ (n : ℝ) - t), mul_one]
+  · intro n
+    refine ⟨hε n, (b n).contDiff_normed, (b n).nonneg_normed, ?_, (b n).integral_normed⟩
+    rw [(b n).tsupport_normed_eq, Real.closedBall_eq_Icc]
+    simp [b]
 
 /-- Paper: §1.4.2, p. 28. The approximant is the cutoff times the mollified
 radial power in the norm coordinate. -/
