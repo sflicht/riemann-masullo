@@ -1,6 +1,6 @@
 # A zeta-derivative criterion for the positive-width strip trace
 
-This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. The fork now constructs [quantitatively bounded radial witnesses for the ordinary zeta divisor](StripZetaCardinal.lean) under (1). It also proves the [Haar-normalized transfer and distance estimate for the physical strip jets](StripPhysicalPairing.lean) under the stated component and order hypotheses. Identifying all admitted indices on the rational trivial chart with the ordinary zeta divisor, and checking the final trace summability implication in Lean, remain separate steps. The arithmetic lower bound in (1) remains open. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
+This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. Under (1), the fork constructs [radial witnesses for ordinary zeta](StripZetaCardinal.lean) and [physical witnesses for the rational trivial character](StripRationalChart.lean). The latter pairs with every admitted ambient jet and gives a height-uniform distance bound for each chosen jet at height at least two. The finite Gram estimate and trace summability still require formal proofs. The arithmetic lower bound in (1) remains open. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
 
 ## Statement
 
@@ -101,6 +101,8 @@ $$
 
 The last integral is finite for every real $s$. The Mellin integral $\int_{\mathbf R} e^{zx}p(x)\,dx$ converges absolutely and recovers the interpolant throughout $|\Re z|<3/2$, hence recovers its prescribed derivatives and vanishing orders. The [combined Lean theorem](StripRadialRealization.lean) starts from the damped divisor itself: if its exterior bound is $C/(1+(\Im z-\Im a)^2)$ on the enlarged strip at $|z-a|\ge1$, it gives this conclusion with $K=C(m-k)U^2/(k!\,|a_m|^3r^m)$. The auxiliary decay bound used to justify the contour shift may depend on the values inside the unit disk; it does not enter the norm estimate.
 
+For the rational chart with trivial representative, the functional equation and zero-free right half-plane put each admitted site strictly inside the critical strip. There the completed Hecke order agrees with the analytic order of ordinary zeta. The [physical witness theorem](StripRationalChart.lean) combines this identification with the Haar-normalized lift. Its norm carries the same inverse factorial as the radial estimate, and its Kronecker pairing includes low jets and the other angular characters.
+
 The quotient class has exactly the prescribed derivative evaluations. Totality of the dual jets identifies it with $x_{\rho,k}$, up to the fixed normalization of radial Haar measure. Conversely, the uniform point-evaluation upper bound on the disks of radius $1/4$ and Cauchy's inequality give $\|\Lambda_{\rho,k}\|\ll 4^k k!$. The factorials cancel, and $4^k\le T_\rho^{O(1)}$ since $k<m_\rho=O(\log T_\rho)$. This proves the coordinate-product estimate from (1) and completes the equivalence.
 
 For simple zeros, (1) becomes a polynomial lower bound for $|\zeta'(\rho)|$. In that case any polynomial upper bound for the discrete negative second moment $\sum_{0<\Im\rho\le T}|\zeta'(\rho)|^{-2}$ suffices. The Gonek–Hejhal prediction is much sharper. The general criterion above also covers a zero at which the first derivative vanishes. [Ng, discussion of the discrete negative moments](https://www.cs.uleth.ca/~nathanng/RESEARCH/mobius2b.pdf)
@@ -113,7 +115,7 @@ From the root of the fork, build the imported project modules and check the rese
 lake build $(awk '$1 == "import" && $2 !~ /^research[.]/ {print $2}' research/Strip*.lean | sort -u)
 research_out=.lake/build/lib/lean/research
 mkdir -p "$research_out"
-for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal
+for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart
 do
   lake env lean -DmaxSynthPendingDepth=3 -DautoImplicit=false -DrelaxedAutoImplicit=false -DwarningAsError=true -o "$research_out/$name.olean" "research/$name.lean" || exit 1
 done
