@@ -3511,30 +3511,29 @@ local notation "finiteJetMoments(" χ ", " a ", " hα ", " hs ")" =>
   {y : W(-_, _, _) | (Function.support (fun j : Jχ(χ, a, _, _) ↦
     spectralSobolevPairing y ((stripU(χ, hα, hs)) j))).Finite}
 
-/-- Every physical moment on the same chart is a scalar Mellin derivative. All
-other compact characters have zero pairing. -/
-private theorem stripTail_profile_pairing
+/-- Pair a radial representative against the physical strip jets before changing
+variables to logarithmic norm. Haar orthogonality removes the other characters. -/
+private theorem stripTail_radial_pairing
     (χ : PontryaginDual C₁ → PontryaginDual C𝔽) (hχ : IsSpectralBasepointChoice χ) (ω : PontryaginDual C₁)
-    {a α s : ℝ} (hα : 0 ≤ α) (hs : 0 ≤ s) {I : Set ℝ} (hI : IsOpen I) (hsub : Icc (-α) α ⊆ I)
-    (ν : Measure C𝔽) [ν.IsHaarMeasure] (hlog : MeasurePreserving logNorm ν volume)
-    (p : PositiveRealExponentialDecay I) (y : W(-α, α, s))
-    (hy : (y : C𝔽 → ℂ) =ᵐ[μ𝔽] fun x ↦ (χ ω x : ℂ)⁻¹ * p.val (logNorm x)) (j : Jχ(χ, a, α, s)) :
+    {a α s : ℝ} (hα : 0 ≤ α) (hs : 0 ≤ s)
+    (p : ℝ → ℂ) (y : W(-α, α, s))
+    (hy : (y : C𝔽 → ℂ) =ᵐ[μ𝔽] fun x ↦ (χ ω x : ℂ)⁻¹ * p (logNorm x)) (j : Jχ(χ, a, α, s)) :
     spectralSobolevPairing y ((stripU(χ, hα, hs)) j) = if j.val.1 = ω then
-      ((Measure.haarScalarFactor μ𝔽 ν : ℝ) : ℂ) *
-        iteratedDeriv dj(j) (mellin (fun t ↦ p.val (Real.log t))) Zj(j) else 0 := by
+      ∫ x : C𝔽, (logNorm x : ℂ)^dj(j) * p (logNorm x) * Complex.exp (Zj(j) * (logNorm x : ℂ)) ∂μ𝔽
+      else 0 := by
   have habs : μ𝔽 ≪ L2μ'(-α, α, s) :=
     withDensity_absolutelyContinuous'
       (symmIntervalSobolevDensity_inv_continuous hα s).measurable.ennreal_ofReal.aemeasurable
       (.of_forall fun g ↦ ENNReal.ofReal_ne_zero_iff.mpr
         (inv_pos.mpr (symmIntervalSobolevDensity_pos hα s (logNorm g))))
-  let q (r : ℝ) := ((r : ℂ)^dj(j) * p.val r) * Complex.exp (Zj(j) * (r : ℂ))
+  let q (r : ℝ) := ((r : ℂ)^dj(j) * p r) * Complex.exp (Zj(j) * (r : ℂ))
   have hu : (((spectralStripJet_memLp χ hα hs j).toLp (stripJet(χ, j))) : C𝔽 → ℂ) =ᵐ[μ𝔽] stripJet(χ, j) :=
     habs.ae_le (MemLp.coeFn_toLp _)
   let v (x : C𝔽) := (χ ω x : ℂ)⁻¹ * (χ j.val.1 x : ℂ)
   have hpair : spectralSobolevPairing y ((spectralStripJet_memLp χ hα hs j).toLp (stripJet(χ, j))) =
       ∫ x, v x * q (logNorm x) ∂μ𝔽 := by
     refine (integral_congr_ae (hy.mul hu)).trans (integral_congr_ae (.of_forall fun x ↦ ?_))
-    change ((χ ω x : ℂ)⁻¹ * p.val (logNorm x)) * stripJet(χ, j) x = v x * q (logNorm x)
+    change ((χ ω x : ℂ)⁻¹ * p (logNorm x)) * stripJet(χ, j) x = v x * q (logNorm x)
     rw [stripProfile_jet]
     dsimp only [v, q]
     ring
@@ -3543,9 +3542,7 @@ private theorem stripTail_profile_pairing
   · rw [ite_eq_left hω]
     have hv (x : C𝔽) : v x = 1 := by dsimp [v]; rw [hω, inv_mul_cancel₀ (Circle.coe_ne_zero _)]
     simp_rw [hv, one_mul]
-    have hz : Zj(j).re ∈ I := by simpa using hsub (j.mem_strip_order_pos hα).1
-    exact stripProfile_log_moment hI (hsub ⟨neg_nonpos.mpr hα, hα⟩) ν
-      hlog p dj(j) Zj(j) hz
+    rfl
   · rw [ite_eq_right hω]
     have hk : ∃ k : C₁, χ ω k.val ≠ χ j.val.1 k.val := by
       by_contra! he
@@ -3557,6 +3554,23 @@ private theorem stripTail_profile_pairing
     intro x
     change q (Real.log ((ideleClassNorm F (k.val * x)).val : ℝ)) = q (logNorm x)
     rw [map_mul, k.property, one_mul]
+
+/-- Every physical moment on the same chart is a scalar Mellin derivative. All
+other compact characters have zero pairing. -/
+private theorem stripTail_profile_pairing
+    (χ : PontryaginDual C₁ → PontryaginDual C𝔽) (hχ : IsSpectralBasepointChoice χ) (ω : PontryaginDual C₁)
+    {a α s : ℝ} (hα : 0 ≤ α) (hs : 0 ≤ s) {I : Set ℝ} (hI : IsOpen I) (hsub : Icc (-α) α ⊆ I)
+    (ν : Measure C𝔽) [ν.IsHaarMeasure] (hlog : MeasurePreserving logNorm ν volume)
+    (p : PositiveRealExponentialDecay I) (y : W(-α, α, s))
+    (hy : (y : C𝔽 → ℂ) =ᵐ[μ𝔽] fun x ↦ (χ ω x : ℂ)⁻¹ * p.val (logNorm x)) (j : Jχ(χ, a, α, s)) :
+    spectralSobolevPairing y ((stripU(χ, hα, hs)) j) = if j.val.1 = ω then
+      ((Measure.haarScalarFactor μ𝔽 ν : ℝ) : ℂ) *
+        iteratedDeriv dj(j) (mellin (fun t ↦ p.val (Real.log t))) Zj(j) else 0 := by
+  rw [stripTail_radial_pairing χ hχ ω hα hs p.val y hy j]
+  split_ifs with hω
+  · have hz : Zj(j).re ∈ I := by simpa using hsub (j.mem_strip_order_pos hα).1
+    exact stripProfile_log_moment hI (hsub ⟨neg_nonpos.mpr hα, hα⟩) ν hlog p dj(j) Zj(j) hz
+  · rfl
 
 /-- Paper: Theorem 10.2.2.1, p. 446. Each admitted strip jet has an ambient Sobolev
 interpolant with all its other admitted moments zero.
@@ -5993,7 +6007,8 @@ private theorem stripAngular_compact_assembly {G E J : Type*} [CommGroup G] [Top
 arbitrary unitary character; changing Haar normalization preserves closed range. -/
 private theorem stripAngular_closed_radial (ξ : PontryaginDual C𝔽) (α s : ℝ) :
     ∃ L : Ws(α, s) →L[ℂ] W(-α, α, s), IsClosed (range L) ∧
-      ∀ f, (L f : C𝔽 → ℂ) =ᵐ[μ𝔽] fun x ↦ (ξ x : ℂ)⁻¹ * f (logNorm x) := by
+      (∀ f, (L f : C𝔽 → ℂ) =ᵐ[μ𝔽] fun x ↦ (ξ x : ℂ)⁻¹ * f (logNorm x)) ∧
+      ∀ f, ‖L f‖ = Real.sqrt ((normOneIdeleClassTamagawaMeasure F).real univ) * ‖f‖ := by
   let ρ := intervalSobolevDensity (-α) α s
   let η := volume.withDensity (fun t : ℝ ↦ ENNReal.ofReal (ρ t))
   let ν := nuTheta
@@ -6032,7 +6047,9 @@ private theorem stripAngular_closed_radial (ξ : PontryaginDual C𝔽) (α s : �
       exact ⟨f,(hBV f).symm⟩
     · rintro ⟨f,hf⟩
       exact ⟨f,B.injective ((hBV f).trans hf)⟩
-  refine ⟨L, heq ▸ hclosed.preimage B.continuous,fun f ↦ ?_⟩
+  refine ⟨L, heq ▸ hclosed.preimage B.continuous,fun f ↦ ?_, fun f ↦ ?_⟩
+  rotate_left
+  · exact ((E.choose_spec (L f)).2).trans (congrArg (_ * ·) ((congrArg norm (hBV f)).trans (hUV f)))
   have habs : ν ≪ μw := withDensity_absolutelyContinuous' (hρ.measurable.comp hl.measurable).ennreal_ofReal.aemeasurable
     (.of_forall fun x ↦ (ENNReal.ofReal_pos.mpr (intervalSobolevDensity_pos _ _ _ _)).ne')
   have hBrep := (E.choose_spec (L f)).1.symm
@@ -6042,6 +6059,63 @@ private theorem stripAngular_closed_radial (ξ : PontryaginDual C𝔽) (α s : �
   apply habs.ae_eq
   filter_upwards [hU (T f), Lp.coeFn_compMeasurePreserving (f : Lp ℂ 2 η) hw] with x h₁ h₂
   exact h₁.trans (congrArg (v x * ·) h₂)
+
+open scoped Classical in
+/-- A continuous radial Sobolev profile gives one ambient vector with all its
+strip jet pairings. Dividing the lift by the norm-one Tamagawa mass removes
+the Haar factor from the moments and divides its norm by the square root
+of that mass. The off-component formula includes boundary jets. -/
+theorem spectralStripJet_exists_normalizedRadial
+    (χ : PontryaginDual C₁ → PontryaginDual C𝔽) (hχ : IsSpectralBasepointChoice χ)
+    (ω : PontryaginDual C₁) {a α s : ℝ} (hα : 0 ≤ α) (hs : 0 ≤ s)
+    (p : ℝ → ℂ) (hp : Continuous p) (hf : MemLp p 2 (intervalSobolevMeasure volume id (-α) α s)) :
+    let c := (normOneIdeleClassTamagawaMeasure F).real univ
+    ∃ y : W(-α, α, s), ‖y‖ = ‖hf.toLp p‖ / Real.sqrt c ∧
+      ∀ j : SpectralStripJetIndex χ a α s,
+        spectralSobolevPairing y (uJet(χ, hα, hs, j)) = if j.val.1 = ω then
+          ∫ t : ℝ, (t : ℂ) ^ j.val.2.2.2 * p t * Complex.exp (shift(j.val.2.1, j.val.2.2.1) * (t : ℂ)) else 0 := by
+  classical
+  intro c
+  let : CompactSpace C₁ := (ideleClassGroup_finiteness F).2.1
+  let : (normOneIdeleClassTamagawaMeasure F).IsHaarMeasure :=
+    (multiplicativeTamagawaMeasures_existsUnique F).exists.choose_spec.2.2.2.1
+  have hc : 0 < c := measureReal_univ_pos
+  have hc' : (c : ℂ) ≠ 0 := Complex.ofReal_ne_zero.mpr hc.ne'
+  let f : Ws(α, s) := hf.toLp p
+  obtain ⟨L, -, hL, hn⟩ := stripAngular_closed_radial (χ ω) α s
+  have hl : MeasurePreserving logNorm nuTheta volume := sobolev_log_preserving m𝔽 hm𝔽 hms𝔽
+  have habs : volume ≪ intervalSobolevMeasure volume id (-α) α s :=
+    withDensity_absolutelyContinuous' (continuous_intervalSobolevDensity' (-α) α s).measurable.ennreal_ofReal.aemeasurable
+      (.of_forall fun t ↦ (ENNReal.ofReal_pos.mpr (intervalSobolevDensity_pos _ _ _ t)).ne')
+  have hrep : (L f : C𝔽 → ℂ) =ᵐ[μ𝔽] fun x ↦ (χ ω x : ℂ)⁻¹ * p (logNorm x) := by
+    refine (hL f).trans ((Measure.absolutelyContinuous_isHaarMeasure μ𝔽 nuTheta).ae_eq ?_)
+    filter_upwards [hl.quasiMeasurePreserving.ae_eq_comp (habs.ae_eq hf.coeFn_toLp)] with x hx
+    exact congrArg ((χ ω x : ℂ)⁻¹ * ·) hx
+  refine ⟨(c : ℂ)⁻¹ • L f, ?_, fun j ↦ ?_⟩
+  · rw [norm_smul, norm_inv, Complex.norm_real, Real.norm_of_nonneg hc.le, hn]
+    change c⁻¹ * (Real.sqrt c * ‖f‖) = ‖f‖ / Real.sqrt c
+    field_simp [hc.ne', (Real.sqrt_pos.mpr hc).ne']
+    rw [Real.sq_sqrt hc.le]
+  · let u := uJet(χ, hα, hs, j)
+    let T := (modulatedIntervalSobolev_dual m𝔽 hm𝔽 μ𝔽 (-α) α s (neg_le_self hα) hs).exists.choose
+    let e := T.symm u
+    have he (y : W(-α, α, s)) : spectralSobolevPairing y u = e y :=
+      ((spectralSobolevPairing_dual (neg_le_self hα) hs e y).2.trans
+        (congrArg (spectralSobolevPairing y) (T.apply_symm_apply u))).symm
+    change spectralSobolevPairing ((c : ℂ)⁻¹ • L f) u = _
+    rw [he, map_smul, ← he, smul_eq_mul, stripTail_radial_pairing χ hχ ω hα hs p (L f) hrep j]
+    split_ifs with hω
+    · let q (t : ℝ) := (t : ℂ) ^ j.val.2.2.2 * p t * Complex.exp (shift(j.val.2.1, j.val.2.2.1) * (t : ℂ))
+      have hq : Continuous q := ((Complex.continuous_ofReal.pow _).mul hp).mul
+        (Complex.continuous_exp.comp (continuous_const.mul Complex.continuous_ofReal))
+      have hpush : (μ𝔽).map logNorm = (normOneIdeleClassTamagawaMeasure F univ) • volume := by
+        rw [ideleClassTamagawaMeasure_eq_smul_canonical, Measure.map_smul _ hl.measurable.aemeasurable,
+          hl.map_eq]
+      change (c : ℂ)⁻¹ * (∫ x, q (logNorm x) ∂μ𝔽) = ∫ t, q t
+      rw [← integral_map hl.measurable.aemeasurable hq.aestronglyMeasurable,
+        hpush, integral_smul_measure, Complex.real_smul]
+      exact inv_mul_cancel_left₀ hc' _
+    · exact mul_zero _
 
 private theorem stripAngular_radial_eigen (χ : PontryaginDual C𝔽) {α s : ℝ} (hα : 0 ≤ α) (hs : 0 ≤ s)
     (f : Ws(α, s)) (y : W(-α, α, s))
@@ -6123,7 +6197,7 @@ private theorem spectralStripJet_reverse_of_radial_lifts (χ : PontryaginDual C�
     (exists_hardySobolevTranslation μ𝔽 m𝔽 (-α) α s (neg_le_self hα) hs).choose_spec.2.comp
       ((continuous_subtype_val.comp continuous_fst).prodMk continuous_snd)
   let J := SpectralStripJetIndex χ a α s
-  choose L hclosed hrep using fun ξ : PontryaginDual C₁ ↦ stripAngular_closed_radial (χ ξ) α s
+  choose L hclosed hrep _hnorm using fun ξ : PontryaginDual C₁ ↦ stripAngular_closed_radial (χ ξ) α s
   let R (ξ : PontryaginDual C₁) := (L ξ).toLinearMap.range
   choose Λ hΛ hΛg using fun j : J ↦ stripAngular_jet_normOne_dual χ hχ hα hs j
   apply stripAngular_compact_assembly κ τ hτ R hclosed _ _ (fun j : J ↦ j.val.1) Λ hΛg
