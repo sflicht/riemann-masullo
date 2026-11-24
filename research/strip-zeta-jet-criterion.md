@@ -1,6 +1,6 @@
 # A zeta-derivative criterion for the positive-width strip trace
 
-This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. The Lean development proves [the local interpolation and two-zero estimates](StripJetInterpolation.lean) and [the radial weighted $L^2$ realization with its exact Mellin jets](StripRadialRealization.lean). Specializing the analytic hypotheses to zeta and identifying the radial class in the idèle-class quotient remain to be formalized. The arithmetic lower bound in (1) remains open. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
+This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. The fork now constructs [quantitatively bounded radial witnesses for the ordinary zeta divisor](StripZetaCardinal.lean) under (1). It also proves the [Haar-normalized transfer and distance estimate for the physical strip jets](StripPhysicalPairing.lean) under the stated component and order hypotheses. Identifying all admitted indices on the rational trivial chart with the ordinary zeta divisor, and checking the final trace summability implication in Lean, remain separate steps. The arithmetic lower bound in (1) remains open. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
 
 ## Statement
 
@@ -57,13 +57,13 @@ $$
 
 where the set consists of the other distinct nontrivial zeros. Then $r^{-m}\le T_\rho^{O(1)}$. Indeed, when a nearest neighbour $\nu$ is closer than $R$, the sum (2) **at $\nu$** contains $m_\rho\log(R/|\nu-\rho|)$. The change of scale and the other case cost $O(m_\rho)=O(\log T_\rho)$. This use of the neighbour's estimate accounts for the multiplicity at the interpolation site itself.
 
-There is also a direct proof of the radius bound from (1). Let $0<d=|\nu-\rho|\le1$, let $n=m_\nu$, and take $M=\sup_{|u-\rho|=2}|P(u)|$. Then
+The Lean proof gives an explicit radius without choosing a nearest neighbor. Suppose $|\Im\rho|\ge 2$, $M$ bounds $|P|$ on $|u-\rho|=2$, and $B>0$ bounds the first nonzero normalized zeta coefficient from below at each zero in $|u-\rho|\le 1$. Removing the pole multiplies that coefficient by $u-1$, whose modulus is at least one throughout the disk. Cauchy's inequality at the center gives $B\,2^m\le M$. At a different zero $\nu$ of order $n$, the two-zero estimate gives
 
 $$
-\left|\frac{P^{(n)}(\nu)}{n!}\right|\le M\,(d/2)^{m_\rho}.
+B\le \left|\frac{P^{(n)}(\nu)}{n!}\right|\le M\left(\frac{|\nu-\rho|}{2}\right)^m.
 $$
 
-To see this, remove both powers from $P$ to get an entire function $G$. On the radius-two circle, $|u-\rho|=2$ and $|u-\nu|\ge1$, so $|G|\le M/2^{m_\rho}$ there and hence at $\nu$. Multiplication by $d^{m_\rho}$ gives the displayed inequality. Since $P^{(n)}(\nu)/n!=(\nu-1)\zeta^{(n)}(\nu)/n!$, (1) gives an inverse-polynomial lower bound at the neighbour, while fixed-strip growth gives a polynomial upper bound for $M$. For $r=d/4$ the remaining cost is $2^{m_\rho}$, polynomial because $m_\rho=O(\log T_\rho)$. When $d>1$, the cost is simply $4^{m_\rho}$. The two-zero inequality is formalized as [`neighbor_coefficient_bound`](StripJetInterpolation.lean).
+Consequently $r=(B/M)^{1/m}$ satisfies $2r\le1$, the open disk $|u-\rho|<2r$ contains no other zero, and $r^{-m}=M/B$. The fourth-order Euler–Maclaurin formula gives $|P(u)|\le C(8+|\Im u|)^5$ on $-2\le\Re u\le3$ unconditionally. For a coefficient bound $b(2+|\Im\nu|)^{-A}$ one may therefore choose $r$ with $r^{-m}=(C/b)(10+|\Im\rho|)^{A+5}$. The constants are uniform in $\rho$, $m$, and the damping degree. [Radius and pole-removal proofs](StripZetaRadius.lean) · [Vertical growth and polynomial isolation](StripZetaGrowth.lean)
 
 On the unit disk about $\rho$, $|g_\rho|\le T_\rho^{O(1)}$ by the maximum principle on its circumference and polynomial growth of $P$ on a fixed vertical strip. On the disk of radius $2r$, $g_\rho$ is zero-free at large height. At the center, (1) gives $|g_\rho(\rho)|^{-1}\le T_\rho^{O(1)}$. Harnack's inequality for the positive harmonic function $\log(M/|g_\rho|)$, with $M$ a polynomial upper bound chosen strictly above the supremum, gives $\sup_{|v|\le r}|1/g_\rho(\rho+v)|\le T_\rho^{O(1)}$.
 
@@ -85,11 +85,13 @@ $$
 
 The half-radius estimate used here is $|1/g(v)|\le U^2/|g(0)|^3$ for $g(v)=F(v)/v^m$ and $|v|\le r$. It follows by applying Borel–Carathéodory to a holomorphic function with real part $\log|g|$ and subtracting its value at zero.
 
-On the two enlarged boundary lines $\Re u=-1,2$, $|v|\ge1$. The principal part is bounded there by $mT_\rho^{O(1)}/k!$. The damping factor supplies decay in $|\Im(u-\rho)|$. Taking $L$ greater by at least three than a polynomial growth exponent of $P$ on $[-1,2]$ yields
+Degree $L=7$ suffices in (3). For $-1\le\Re u\le2$ and $0\le\Re\rho\le1$, the fifth-power growth bound and $1+|\Im(u-\rho)|\le 8|1+(u-\rho)/4|$ yield
 $$
-|H_{\rho,k}(u)|\ \ll\ (1+|\Im(u-\rho)|)^{-2}\,T_\rho^{O(1)}/k!
+|P(u)q_\rho(u)|\le C\,(8+|\Im\rho|)^5/(1+(\Im(u-\rho))^2).
 $$
-on both lines. The apparent pole at $\rho$ is removable, and the pole of $q_\rho$ is outside the enlarged strip. The radial estimate can be proved directly by absolute Mellin inversion. Set $z=u-1/2$ and $a=\rho-1/2$. Suppose the interpolant on the two lines $\Re z=\pm 3/2$ is bounded by $K/(1+(\Im z-\Im a)^2)$. Each line has absolute integral at most $\pi K$, independent of the height of the zero. Shift the inverse contour to the right line for $x\ge0$ and the left line for $x<0$. With the inverse normalization $1/(2\pi)$, the resulting continuous representative satisfies
+On the boundary lines $\Re u=-1,2$ one has $|u-\rho|\ge1$, so the exterior estimate for (3) preserves this translated decay with a polynomial height factor divided by $k!$. Both estimates are proved on the fork. [Damped strip envelope](StripZetaGrowth.lean) · [Interpolation estimate](StripJetInterpolation.lean)
+
+The apparent pole at $\rho$ is removable, and the pole of $q_\rho$ is outside the enlarged strip. The radial estimate can be proved directly by absolute Mellin inversion. Set $z=u-1/2$ and $a=\rho-1/2$. Suppose the interpolant on the two lines $\Re z=\pm 3/2$ is bounded by $K/(1+(\Im z-\Im a)^2)$. Each line has absolute integral at most $\pi K$, independent of the height of the zero. Shift the inverse contour to the right line for $x\ge0$ and the left line for $x<0$. With the inverse normalization $1/(2\pi)$, the resulting continuous representative satisfies
 
 $$
 |p(x)|\le (K/2)e^{-3|x|/2},\qquad
@@ -103,17 +105,20 @@ The quotient class has exactly the prescribed derivative evaluations. Totality o
 
 For simple zeros, (1) becomes a polynomial lower bound for $|\zeta'(\rho)|$. In that case any polynomial upper bound for the discrete negative second moment $\sum_{0<\Im\rho\le T}|\zeta'(\rho)|^{-2}$ suffices. The Gonek–Hejhal prediction is much sharper. The general criterion above also covers a zero at which the first derivative vanishes. [Ng, discussion of the discrete negative moments](https://www.cs.uleth.ca/~nathanng/RESEARCH/mobius2b.pdf)
 
-## Checking the Lean result
+## Checking the Lean results
 
-From the root of this fork branch, with the project dependencies available, run
+From the root of the fork, build the imported project modules and check the research files in dependency order.
 
 ```sh
-lake build RiemannMasullo.AppB_AnalyticNT.Sec2 RiemannMasullo.ForMathlib.MeasureTheory.Function.L2Space
-mkdir -p .lake/build/lib/lean/research
-lake env lean -DwarningAsError=true -o .lake/build/lib/lean/research/StripJetInterpolation.olean research/StripJetInterpolation.lean
-lake env lean -DwarningAsError=true research/StripRadialRealization.lean
+lake build $(awk '$1 == "import" && $2 !~ /^research[.]/ {print $2}' research/Strip*.lean | sort -u)
+research_out=.lake/build/lib/lean/research
+mkdir -p "$research_out"
+for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal
+do
+  lake env lean -DmaxSynthPendingDepth=3 -DautoImplicit=false -DrelaxedAutoImplicit=false -DwarningAsError=true -o "$research_out/$name.olean" "research/$name.lean" || exit 1
+done
 ```
 
-The branch exposes the existing Appendix B.2 contour-shift and log-coordinate identities for reuse by the radial theorem.
+The fourth-order block estimate adapts Thomas Lince’s corrected trapezoid proof. [Project attribution](../RiemannMasullo/External/ATTRIBUTION.md)
 
 Prepared with Codex assistance.
