@@ -1,6 +1,6 @@
 # A zeta-derivative criterion for the positive-width strip trace
 
-This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. The argument below has not been formalized in Lean. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
+This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. The [Lean companion](StripJetInterpolation.lean) proves the interpolation and local analytic estimates in the sufficient direction. The zeta estimates, the Mellin–Sobolev passage and the full equivalence remain to be formalized. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
 
 ## Statement
 
@@ -49,13 +49,21 @@ The standard estimates apply at large height; conjugation and the finitely many 
 
 ## Sufficiency: interpolants for all derivative orders
 
-Assume (1), hence (2). Put $P(u)=(u-1)\zeta(u)$, $m=m_\rho$, $v=u-\rho$ and $g_\rho(u)=P(u)/v^m$, with its removable value filled in. Let
+Assume (1), hence (2). Put $P(u)=(u-1)\zeta(u)$ with its removable value $P(1)=1$, $m=m_\rho$, $v=u-\rho$ and $g_\rho(u)=P(u)/v^m$, with its removable value filled in. Let
 
 $$
 r=\tfrac14\min(1,\operatorname{dist}(\rho,\{\nu:\nu\ne\rho\})),
 $$
 
 where the set consists of the other distinct nontrivial zeros. Then $r^{-m}\le T_\rho^{O(1)}$. Indeed, when a nearest neighbour $\nu$ is closer than $R$, the sum (2) **at $\nu$** contains $m_\rho\log(R/|\nu-\rho|)$. The change of scale and the other case cost $O(m_\rho)=O(\log T_\rho)$. This use of the neighbour's estimate accounts for the multiplicity at the interpolation site itself.
+
+There is also a direct proof of the radius bound from (1). Let $0<d=|\nu-\rho|\le1$, let $n=m_\nu$, and take $M=\sup_{|u-\rho|=2}|P(u)|$. Then
+
+$$
+\left|\frac{P^{(n)}(\nu)}{n!}\right|\le M\,(d/2)^{m_\rho}.
+$$
+
+To see this, remove both powers from $P$ to get an entire function $G$. On the radius-two circle, $|u-\rho|=2$ and $|u-\nu|\ge1$, so $|G|\le M/2^{m_\rho}$ there and hence at $\nu$. Multiplication by $d^{m_\rho}$ gives the displayed inequality. Since $P^{(n)}(\nu)/n!=(\nu-1)\zeta^{(n)}(\nu)/n!$, (1) gives an inverse-polynomial lower bound at the neighbour, while fixed-strip growth gives a polynomial upper bound for $M$. For $r=d/4$ the remaining cost is $2^{m_\rho}$, polynomial because $m_\rho=O(\log T_\rho)$. When $d>1$, the cost is simply $4^{m_\rho}$. The two-zero inequality is formalized as [`neighbor_coefficient_bound`](StripJetInterpolation.lean).
 
 On the unit disk about $\rho$, $|g_\rho|\le T_\rho^{O(1)}$ by the maximum principle on its circumference and polynomial growth of $P$ on a fixed vertical strip. On the disk of radius $2r$, $g_\rho$ is zero-free at large height. At the center, (1) gives $|g_\rho(\rho)|^{-1}\le T_\rho^{O(1)}$. Harnack's inequality for the positive harmonic function $\log(M/|g_\rho|)$, with $M$ a polynomial upper bound chosen strictly above the supremum, gives $\sup_{|v|\le r}|1/g_\rho(\rho+v)|\le T_\rho^{O(1)}$.
 
@@ -68,6 +76,14 @@ H_{\rho,k}(u)=P(u)q_\rho(u)\,
 $$
 
 The principal part is a finite sum of $v^{-1},\ldots,v^{-(m-k)}$. Its coefficients are bounded by $T_\rho^{O(1)}/k!$ by Cauchy's formula on $|v|=r$ and the bound on $r^{-m}$. The constants and exponents here are independent of $k$ and $\rho$. At $\rho$, (3) equals $v^k/k!+O(v^m)$. At every other zero $\nu$, the factor $P$ gives all $m_\nu$ required vanishings.
+
+More explicitly, in centered coordinates write $F(v)=P(\rho+v)q_\rho(\rho+v)$ and $a_m=F^{(m)}(0)/m!$. Suppose $0<2r\le1$, the punctured disk of radius $2r$ is free of zeros of $F$, and $U$ bounds $|F|$ on the unit circle with $U>|a_m|$. Then for $|v|\ge1$ in the domain of $F$, the Lean theorem [`exists_cardinal_interpolant`](StripJetInterpolation.lean) gives all the prescribed jets and
+
+$$
+|H_{\rho,k}(\rho+v)|\le\frac{m-k}{k!}\,\frac{U^2}{|a_m|^3 r^m}\,|F(v)|.
+$$
+
+The half-radius estimate used here is $|1/g(v)|\le U^2/|g(0)|^3$ for $g(v)=F(v)/v^m$ and $|v|\le r$. It follows by applying Borel–Carathéodory to a holomorphic function with real part $\log|g|$ and subtracting its value at zero.
 
 On the two enlarged boundary lines $\Re u=-1,2$, $|v|\ge1$. The principal part is bounded there by $mT_\rho^{O(1)}/k!$. The damping factor supplies decay in $|\Im(u-\rho)|$. Taking $L$ greater by at least three than a polynomial growth exponent of $P$ on $[-1,2]$ yields
 $$
