@@ -1,6 +1,6 @@
 # A zeta-derivative criterion for the positive-width strip trace
 
-This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. The [Lean companion](StripJetInterpolation.lean) proves the interpolation and local analytic estimates in the sufficient direction. The zeta estimates, the Mellin–Sobolev passage and the full equivalence remain to be formalized. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
+This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. The Lean development proves [the local interpolation and two-zero estimates](StripJetInterpolation.lean) and [the radial weighted $L^2$ realization with its exact Mellin jets](StripRadialRealization.lean). Specializing the analytic hypotheses to zeta and identifying the radial class in the idèle-class quotient remain to be formalized. The arithmetic lower bound in (1) remains open. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
 
 ## Statement
 
@@ -89,10 +89,31 @@ On the two enlarged boundary lines $\Re u=-1,2$, $|v|\ge1$. The principal part i
 $$
 |H_{\rho,k}(u)|\ \ll\ (1+|\Im(u-\rho)|)^{-2}\,T_\rho^{O(1)}/k!
 $$
-on both lines. The apparent pole at $\rho$ is removable, and the pole of $q_\rho$ is outside the enlarged strip. Fourier inversion on the center line, shifting the contour to each enlarged boundary and applying Plancherel, gives a radial representative with norm $T_\rho^{O(1)}/k!$ in the original Sobolev space. In detail, the enlarged lines control the two squared weights $e^{3x}$ and $e^{-3x}$, whose sum dominates $e^{2|x|}(1+x^2)^{s/2}$ for fixed $s$. The horizontal sides vanish in the contour shift by the same polynomial decay at large imaginary part.
+on both lines. The apparent pole at $\rho$ is removable, and the pole of $q_\rho$ is outside the enlarged strip. The radial estimate can be proved directly by absolute Mellin inversion. Set $z=u-1/2$ and $a=\rho-1/2$. Suppose the interpolant on the two lines $\Re z=\pm 3/2$ is bounded by $K/(1+(\Im z-\Im a)^2)$. Each line has absolute integral at most $\pi K$, independent of the height of the zero. Shift the inverse contour to the right line for $x\ge0$ and the left line for $x<0$. With the inverse normalization $1/(2\pi)$, the resulting continuous representative satisfies
+
+$$
+|p(x)|\le (K/2)e^{-3|x|/2},\qquad
+\|p\|_{L^2(e^{2|x|}(1+x^2)^{s/2}\,dx)}^2
+\le \frac{K^2}{4}\int_{\mathbf R}(1+x^2)^{s/2}e^{-|x|}\,dx.
+$$
+
+The last integral is finite for every real $s$. The Mellin integral $\int_{\mathbf R} e^{zx}p(x)\,dx$ converges absolutely and recovers the interpolant throughout $|\Re z|<3/2$, hence recovers its prescribed derivatives and vanishing orders. The [combined Lean theorem](StripRadialRealization.lean) starts from the damped divisor itself: if its exterior bound is $C/(1+(\Im z-\Im a)^2)$ on the enlarged strip at $|z-a|\ge1$, it gives this conclusion with $K=C(m-k)U^2/(k!\,|a_m|^3r^m)$. The auxiliary decay bound used to justify the contour shift may depend on the values inside the unit disk; it does not enter the norm estimate.
 
 The quotient class has exactly the prescribed derivative evaluations. Totality of the dual jets identifies it with $x_{\rho,k}$, up to the fixed normalization of radial Haar measure. Conversely, the uniform point-evaluation upper bound on the disks of radius $1/4$ and Cauchy's inequality give $\|\Lambda_{\rho,k}\|\ll 4^k k!$. The factorials cancel, and $4^k\le T_\rho^{O(1)}$ since $k<m_\rho=O(\log T_\rho)$. This proves the coordinate-product estimate from (1) and completes the equivalence.
 
 For simple zeros, (1) becomes a polynomial lower bound for $|\zeta'(\rho)|$. In that case any polynomial upper bound for the discrete negative second moment $\sum_{0<\Im\rho\le T}|\zeta'(\rho)|^{-2}$ suffices. The Gonek–Hejhal prediction is much sharper. The general criterion above also covers a zero at which the first derivative vanishes. [Ng, discussion of the discrete negative moments](https://www.cs.uleth.ca/~nathanng/RESEARCH/mobius2b.pdf)
+
+## Checking the Lean result
+
+From the root of this fork branch, with the project dependencies available, run
+
+```sh
+lake build RiemannMasullo.AppB_AnalyticNT.Sec2 RiemannMasullo.ForMathlib.MeasureTheory.Function.L2Space
+mkdir -p .lake/build/lib/lean/research
+lake env lean -DwarningAsError=true -o .lake/build/lib/lean/research/StripJetInterpolation.olean research/StripJetInterpolation.lean
+lake env lean -DwarningAsError=true research/StripRadialRealization.lean
+```
+
+The branch exposes the existing Appendix B.2 contour-shift and log-coordinate identities for reuse by the radial theorem.
 
 Prepared with Codex assistance.

@@ -2098,7 +2098,7 @@ private theorem integrable_verticalTrace_moment {f : ℝ → ℂ} (hf : Continuo
 
 /-- The inverse Mellin integral agrees on either side of a closed strip when the
 vertical traces are integrable and have uniform power decay with exponent at least one. -/
-private theorem mellinInv_eq_of_verticalTrace_decay {F : ℂ → ℂ} {c d C N : ℝ}
+theorem mellinInv_eq_of_verticalTrace_decay {F : ℂ → ℂ} {c d C N : ℝ}
     (hcd : c ≤ d) (hF : DifferentiableOn ℂ F (closedStrip c d))
     (hc : Complex.VerticalIntegrable F c) (hd : Complex.VerticalIntegrable F d)
     (hC : 0 ≤ C) (hN : 1 ≤ N)
@@ -3039,7 +3039,7 @@ theorem schwartzOnLeftHalfPlane_mellin_of_exponentialDecay
   exact hBound σ hσ y (abs_pos.mp hy)
 
 /-- The Mellin integral of a logarithmic profile after the substitution `t = exp x`. -/
-private theorem mellin_logProfile_eq (g : ℝ → ℂ) (s : ℂ) :
+theorem mellin_logProfile_eq (g : ℝ → ℂ) (s : ℂ) :
     mellin (fromLog g) s = ∫ x : ℝ, Complex.exp (s * x) * g x := by
   rw [mellin, ← integral_comp_exp]
   apply integral_congr_ae
