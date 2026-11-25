@@ -105,7 +105,7 @@ theorem nuclearityTestMellin_integrable (χ : U) (φ : 𝒟) :
     simp
 
 /-- Absolute convergence on every norm line makes the Mellin multiplier entire. -/
-private theorem archNuclearityDenominator_closed_invariant_multiplier
+theorem nuclearityTestMellin_differentiable
     (χ : PontryaginDual (IdeleClassGroup (𝓞 F) F)) (φ : 𝒟) :
     Differentiable ℂ (nuclearityTestMellin χ φ) := by
   let : BorelSpace C𝔽 := ⟨rfl⟩
@@ -1182,7 +1182,7 @@ private theorem spectralNuclearity_trace_mellin_profile (χ : PontryaginDual C�
 
 /-- On each bounded vertical strip the Mellin transform of a compactly supported test decays
 faster than any fixed inverse power of the height. -/
-private theorem spectralNuclearity_trace_vertical_decay (χ : PontryaginDual C𝔽) (φ : 𝒟) (a b : ℝ)
+theorem spectralNuclearity_trace_vertical_decay (χ : PontryaginDual C𝔽) (φ : 𝒟) (a b : ℝ)
     (hab : a < b) (k : ℕ) (hk : 1 ≤ k) :
     ∃ C > (0 : ℝ), ∀ᶠ y : ℝ in comap abs atTop, ∀ σ ∈ Icc a b,
       ‖nuclearityTestMellin χ φ ((σ : ℂ) + y * Complex.I)‖ ≤ C / |y| ^ k := by
@@ -1259,7 +1259,7 @@ private theorem spectralNuclearity_trace_finite_companion (χ : U) :
     exact le_add_of_nonneg_left (hG.analyticAt z).meromorphicOrderAt_nonneg
 
 /-- Zeros in a vertical strip, counted with multiplicity, have a summable quadratic weight. -/
-private theorem spectralNuclearity_trace_zero_count (χ : U) (a : ℝ) :
+theorem spectralNuclearity_trace_zero_count (χ : U) (a : ℝ) :
     Summable (fun r : windowZeros(χ, a) ↦ (zeroOrder(χ, r.val) : ℝ) / (1 + |r.val.im|) ^ 2) := by
   obtain ⟨L, hL, hSeries, hOrder⟩ := spectralNuclearity_trace_finite_companion χ
   obtain ⟨hLine, k, _, hInv⟩ := finiteHeckeL_inv_isBigO_oneLine χ L hL hSeries
@@ -1439,7 +1439,7 @@ private theorem spectralNuclearity_trace_descends (a : ℝ) (N : ℕ) (φ : 𝒟
       (f.property.2.1 z (mem_univ _)).differentiableAt (Filter.univ_mem' fun _ ↦ mem_univ _)
     have hprod : (A f).val = nuclearityTestMellin χ φ * f.val := funext (hA f)
     rw [hprod, iteratedDeriv_mul
-      (archNuclearityDenominator_closed_invariant_multiplier χ φ).contDiff.contDiffAt
+      (nuclearityTestMellin_differentiable χ φ).contDiff.contDiffAt
       hf.contDiff.contDiffAt]
     apply Finset.sum_eq_zero
     intro k _
@@ -1566,7 +1566,7 @@ private theorem spectralNuclearity_trace_finite_cluster (a : ℝ) (N : ℕ) (φ 
     rw [hT,hAq,hL,hd,show (A f).val = nuclearityTestMellin χ φ * f.val from funext (hA f)]
     have hf : Differentiable ℂ f.val := fun z ↦
       (f.property.2.1 z (mem_univ _)).differentiableAt (Filter.univ_mem' fun _ ↦ mem_univ _)
-    rw [iteratedDeriv_mul (archNuclearityDenominator_closed_invariant_multiplier χ φ).contDiff.contDiffAt
+    rw [iteratedDeriv_mul (nuclearityTestMellin_differentiable χ φ).contDiff.contDiffAt
       hf.contDiff.contDiffAt]
     apply Finset.sum_congr rfl
     intro k _
@@ -3986,7 +3986,7 @@ private theorem spectralNuclearity_strong_of_jet_action (a : ℝ) (N : ℕ) (hN 
   have hq : Topology.IsQuotientMap q := (Submodule.isQuotientMap_mkQ K).comp (Submodule.isQuotientMap_mkQ D)
   obtain ⟨p,hp'⟩ := spectralBoundary_countable_seminorms E
   let M := nuclearityTestMellin χ φ
-  have hM : Differentiable ℂ M := archNuclearityDenominator_closed_invariant_multiplier χ φ
+  have hM : Differentiable ℂ M := nuclearityTestMellin_differentiable χ φ
   have decay (σ : ℝ) (k : ℕ) : ∃ C > (0:ℝ), ∀ w : ℂ, |w.re-σ| ≤ 1 → (1+|w.im|)^k*‖M w‖ ≤ C := by
     obtain ⟨C,hC,h⟩ := spectralBoundary_globalStrip hM.continuous
       (spectralNuclearity_trace_vertical_decay χ φ (σ-1) (σ+1) (by linarith)) k
@@ -4870,7 +4870,7 @@ theorem finiteNuclearityDenominator_closed_invariant (p : HeightOneSpectrum (�
       (specDenom_mem_div G ((Z(χ, τ, hτ)) y))
     obtain ⟨u, hu, hv⟩ := (hmem x).mp hx
     refine (hmem _).mpr ⟨fun s ↦ nuclearityTestMellin χ φ s * u s, ?_, fun s ↦ ?_⟩
-    · exact (archNuclearityDenominator_closed_invariant_multiplier χ φ).mul hu
+    · exact (nuclearityTestMellin_differentiable χ φ).mul hu
     · rw [(exists_polarThetaNuclearityAction χ τ hτ φ).choose_spec.1 x s, hv s]
       ring
 
@@ -5988,7 +5988,7 @@ private theorem finiteNuclearity_trace_jet_bounds (p : HeightOneSpectrum (𝓞 �
     (exists_polarThetaNuclearityAction_mellin_closedEmbedding F χ τ hτ)
     (schwartzBergman_frechet univ isOpen_univ ordConnected_univ univ_nonempty) D hclosed
   let M := nuclearityTestMellin χ φ
-  have hM : Differentiable ℂ M := archNuclearityDenominator_closed_invariant_multiplier χ φ
+  have hM : Differentiable ℂ M := nuclearityTestMellin_differentiable χ φ
   have decay (k : ℕ) : ∃ C : ℝ, ∀ w : ℂ, w.re ∈ Icc (-1 : ℝ) 1 →
       ‖M w‖ * (1 + |w.im|) ^ k ≤ C := by
     obtain ⟨C, _, h⟩ := spectralBoundary_globalStrip hM.continuous
@@ -6064,7 +6064,7 @@ theorem finiteNuclearity_trace (p : HeightOneSpectrum (𝓞 ℚ)) (φ : 𝒟) :
     finiteNuclearity_trace_diagonal D.mkQ D.mkQ_surjective (Aθ(φ)) T hT
       (fun x ↦ ((Z(χ, τ, hτ)) x).val) (fun x z ↦
         (((Z(χ, τ, hτ)) x).property.2.1 z (mem_univ _)).differentiableAt (Filter.univ_mem' mem_univ))
-      M (archNuclearityDenominator_closed_invariant_multiplier χ φ)
+      M (nuclearityTestMellin_differentiable χ φ)
       (fun x ↦ funext ((exists_polarThetaNuclearityAction χ τ hτ φ).choose_spec.1 x))
       Subtype.val m d b hd hb j
   have hrow' (j) (x : Q) : ‖((c j : ℂ) * (a j : ℂ))⁻¹ * d j (T x)‖ ≤ q x := by
@@ -9749,7 +9749,7 @@ theorem archNuclearityDenominator_closed_invariant (φ : 𝒟) :
     have hprod : ((Z(χ, τ, hτ)) (Aθ(φ) x)).val = nuclearityTestMellin χ φ * v.val :=
       funext ((exists_polarThetaNuclearityAction χ τ hτ φ).choose_spec.1 x)
     rw [hjet, hprod, iteratedDeriv_mul
-      ((archNuclearityDenominator_closed_invariant_multiplier χ φ).contDiff.contDiffAt)
+      ((nuclearityTestMellin_differentiable χ φ).contDiff.contDiffAt)
       hv.contDiff.contDiffAt]
     apply Finset.sum_eq_zero
     intro i _
@@ -10141,7 +10141,7 @@ theorem archNuclearity_trace (φ : 𝒟)
     have hprod : ((Z(χ, τ, hτ)) (Aθ(φ) x)).val = M * v.val :=
       funext ((exists_polarThetaNuclearityAction χ τ hτ φ).choose_spec.1 x)
     rw [hjet, hprod, iteratedDeriv_mul
-      ((archNuclearityDenominator_closed_invariant_multiplier χ φ).contDiff.contDiffAt)
+      ((nuclearityTestMellin_differentiable χ φ).contDiff.contDiffAt)
       hv.contDiff.contDiffAt]
     refine Finset.sum_congr rfl fun i _ ↦ ?_
     rw [hjet]
@@ -10532,7 +10532,7 @@ theorem archNuclearityAction_nuclear_iff (φ : 𝒟) :
     have hprod : ((Z(χ, τ, hτ)) (Aθ(φ) x)).val = nuclearityTestMellin χ φ * v.val :=
       funext ((exists_polarThetaNuclearityAction χ τ hτ φ).choose_spec.1 x)
     rw [hT x, he, hjet, hprod, iteratedDeriv_mul
-      ((archNuclearityDenominator_closed_invariant_multiplier χ φ).contDiff.contDiffAt)
+      ((nuclearityTestMellin_differentiable χ φ).contDiff.contDiffAt)
       hv.contDiff.contDiffAt]
     refine Finset.sum_congr rfl fun i _ ↦ ?_
     rw [he, hjet]

@@ -8518,7 +8518,9 @@ theorem spectralStripMarkushevichBasis (χ : PontryaginDual C₁ → PontryaginD
     (stripI(hα)) hs (stripU(χ, hα, hs))
     (spectralStripJet_commonKernel χ hχ hα hs) (spectralStripJet_denseInterpolants χ hχ hα hs)⟩
 
-private theorem spectralStripJet_norm_sq (χ : PontryaginDual C₁ → PontryaginDual C𝔽)
+/-- The squared physical norm of a strip jet is its radial moment, multiplied by the
+Haar scalar relative to the measure sending log norm to Lebesgue measure. -/
+theorem spectralStripJet_norm_sq (χ : PontryaginDual C₁ → PontryaginDual C𝔽)
     {a α s : ℝ} (hα : 0 ≤ α) (hs : 0 ≤ s) (j : SpectralStripJetIndex χ a α s)
     (ν : Measure C𝔽) [ν.IsHaarMeasure] (hν : ν = canonicalModulatedHaar m𝔽 hm𝔽) :
     ‖(spectralStripJet_memLp χ hα hs j).toLp (stripJet(χ, j))‖ ^ 2 =

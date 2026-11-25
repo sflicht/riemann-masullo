@@ -1,6 +1,6 @@
 # A zeta-derivative criterion for the positive-width strip trace
 
-This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. Under (1), the fork constructs [radial witnesses for ordinary zeta](StripZetaCardinal.lean) and [physical witnesses for the rational trivial character](StripRationalChart.lean). The latter pairs with every admitted ambient jet and gives a height-uniform distance bound for each chosen jet at height at least two. The finite Gram estimate and trace summability still require formal proofs. The arithmetic lower bound in (1) remains open. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
+This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. Under (1), the fork constructs [radial witnesses for ordinary zeta](StripZetaCardinal.lean) and [physical witnesses for the rational trivial character](StripRationalChart.lean). The latter pairs with every admitted ambient jet and gives a height-uniform distance bound for each chosen jet at height at least two. The [finite Gram estimate](StripGramEstimate.lean) bounds the coordinate at every ordinate, uniformly in the finite block. For this component, the [Mellin-weighted sum over all retained jets](StripRationalTrace.lean) now satisfies the uniform bound in #7455 under (1). The arithmetic lower bound in (1) remains open. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
 
 ## Statement
 
@@ -103,6 +103,14 @@ The last integral is finite for every real $s$. The Mellin integral $\int_{\math
 
 For the rational chart with trivial representative, the functional equation and zero-free right half-plane put each admitted site strictly inside the critical strip. There the completed Hecke order agrees with the analytic order of ordinary zeta. The [physical witness theorem](StripRationalChart.lean) combines this identification with the Haar-normalized lift. Its norm carries the same inverse factorial as the radial estimate, and its Kronecker pairing includes low jets and the other angular characters.
 
+For the finite Gram estimate write $H=10+|\Im\rho|$. At a real offset $|b|\le 1/2$ the squared jet norm is bounded by a fixed Haar scalar times
+$$
+\int_{\mathbf R}|x|^{2k} e^{-|x|}\,dx=2(2k)!\le 2(2^k k!)^2.
+$$
+The physical witness bound cancels $k!$. At height at least two, $2^k\le 2^m\le r^{-m}\ll H^{A+5}$, so $\|u_i\|\sqrt{\operatorname{Re}(G_S^{-1})_{ii}}\ll H^{6A+30}$ uniformly in the finite block $S$. For the finitely many lower jets the existing individual interpolants give a single constant for a fixed basepoint choice. The finite block may contain jets on any angular component. [Finite Gram estimate](StripGramEstimate.lean) · [Upstream Gram comparison](https://github.com/mccorvie/riemann-masullo/pull/7484)
+
+The [weighted finite-sum theorem](StripRationalTrace.lean) uses the circle of radius $2\exp((4+s)/2)$ prescribed in §10.3.2. On these circles the Mellin transform of a compact Bruhat test has a uniform bound of order $H^{-6A-32}$. Multiplying by the coordinate bound and summing the retained orders costs at most a constant times $m_\rho/(1+|\Im\rho|)^2$ per site. The project's quadratic zero-count estimate sums this last weight. This proves the implication from (1) to the rational trivial-component finite Gram inequality for every $s\ge0$, with one constant for all finite sets and all circle samples. The general Hecke case and an unconditional bound for the first coefficient remain open.
+
 The quotient class has exactly the prescribed derivative evaluations. Totality of the dual jets identifies it with $x_{\rho,k}$, up to the fixed normalization of radial Haar measure. Conversely, the uniform point-evaluation upper bound on the disks of radius $1/4$ and Cauchy's inequality give $\|\Lambda_{\rho,k}\|\ll 4^k k!$. The factorials cancel, and $4^k\le T_\rho^{O(1)}$ since $k<m_\rho=O(\log T_\rho)$. This proves the coordinate-product estimate from (1) and completes the equivalence.
 
 For simple zeros, (1) becomes a polynomial lower bound for $|\zeta'(\rho)|$. In that case any polynomial upper bound for the discrete negative second moment $\sum_{0<\Im\rho\le T}|\zeta'(\rho)|^{-2}$ suffices. The Gonek–Hejhal prediction is much sharper. The general criterion above also covers a zero at which the first derivative vanishes. [Ng, discussion of the discrete negative moments](https://www.cs.uleth.ca/~nathanng/RESEARCH/mobius2b.pdf)
@@ -115,7 +123,7 @@ From the root of the fork, build the imported project modules and check the rese
 lake build $(awk '$1 == "import" && $2 !~ /^research[.]/ {print $2}' research/Strip*.lean | sort -u)
 research_out=.lake/build/lib/lean/research
 mkdir -p "$research_out"
-for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart
+for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace
 do
   lake env lean -DmaxSynthPendingDepth=3 -DautoImplicit=false -DrelaxedAutoImplicit=false -DwarningAsError=true -o "$research_out/$name.olean" "research/$name.lean" || exit 1
 done
