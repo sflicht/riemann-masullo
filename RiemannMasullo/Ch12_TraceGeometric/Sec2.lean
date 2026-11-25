@@ -393,6 +393,14 @@ private theorem exists_indentationLiftL1_compact {b : G → ℝ} (hb : IsIndenta
     ((isClosed_tsupport _).inter (hK.isClosed.preimage QuotientGroup.continuous_mk)) ?_
   exact inter_subset_inter_right _ (preimage_mono (hn.trans (image_mono interior_subset)))
 
+include hH in
+omit [T2Space G] [BorelSpace G] [μH.IsHaarMeasure] in
+/-- The support of an indentation is compact above every compact subset of the quotient. -/
+theorem IsIndentation.isCompact_tsupport_inter_preimage {b : G → ℝ}
+    (hb : IsIndentation H μH b) {K : Set Q} (hK : IsCompact K) :
+    IsCompact (tsupport b ∩ π ⁻¹' K) :=
+  exists_indentationLiftL1_compact H hH μH hb hK
+
 private theorem exists_indentationLiftL1_test {b : G → ℝ} (hb : IsIndentation H μH b)
     (f : C_c(Q, ℂ)) : ∃ F : C_c(G, ℂ), (⇑F = indentationLift H b f) ∧
       indentationAverage H hH μH F = f := by

@@ -1495,6 +1495,150 @@ private theorem cubicZeroCount_horizontalEdges (K : Type) [Field K] [NumberField
       · exact hden.2.trans (by gcongr)
     _ = _ := by simp only [add_mul, Real.exp_add]; ring
 
+/-- Finitely many possible poles can simultaneously be removed by a polynomial.
+The exponents come from the defining property of meromorphicity at those points. -/
+private theorem cubicZeroCount_clearFinitePoles (K : Type) [Field K] [NumberField K] (T : Finset ℂ)
+    (hT : ∀ z ∉ T, 0 < z.re → z.re < 1 → order(ζChar(K), z) ≤ order(ζChar(ℚ), z)) :
+    ∃ m : ℂ → ℕ, Differentiable ℂ (fun z ↦ (∏ a ∈ T, (z - a) ^ m a) * ζRatio(K) z) := by
+  classical
+  have H := meromorphicNFOn_toMeromorphicNFOn (completedζ(ℚ) / completedζ(K)) univ
+  have hmer (z : ℂ) := (H (mem_univ z)).meromorphicAt
+  let m (z : ℂ) := (hmer z).choose
+  refine ⟨m, fun z ↦ AnalyticAt.differentiableAt ?_⟩
+  by_cases hz : z ∈ T
+  · have hc : AnalyticAt ℂ (fun w ↦ (w - z) ^ m z * ζRatio(K) w) z := (hmer z).choose_spec
+    have hd : AnalyticAt ℂ (fun w : ℂ ↦ ∏ a ∈ T.erase z, (w - a) ^ m a) z := by fun_prop
+    have he : (fun w ↦ (∏ a ∈ T, (w - a) ^ m a) * ζRatio(K) w) =
+        (fun w ↦ (∏ a ∈ T.erase z, (w - a) ^ m a) * ((w - z) ^ m z * ζRatio(K) w)) := by
+      funext w
+      rw [← Finset.mul_prod_erase _ _ hz]
+      ring
+    rw [he]
+    exact hd.mul hc
+  · apply AnalyticAt.mul (by fun_prop)
+    apply (H (mem_univ z)).meromorphicOrderAt_nonneg_iff_analyticAt.mp
+    have hQ := continuedCompletedHeckeL_spec ζChar(ℚ)
+    have hK := continuedCompletedHeckeL_spec ζChar(K)
+    rw [meromorphicOrderAt_toMeromorphicNFOn (hQ.1.meromorphicOn.div hK.1.meromorphicOn) (mem_univ _),
+      meromorphicOrderAt_div (hQ.1.meromorphicOn z (mem_univ _)) (hK.1.meromorphicOn z (mem_univ _))]
+    by_cases h₀ : z = 0
+    · subst z; rw [(cubicZeroCount_poles ℚ).1, (cubicZeroCount_poles K).1]; decide
+    by_cases h₁ : z = 1
+    · subst z; rw [(cubicZeroCount_poles ℚ).2, (cubicZeroCount_poles K).2]; decide
+    by_cases h : 0 < z.re ∧ z.re < 1
+    · rw [spectralLineJet_memLp_false_stripOrder ℚ z h.1 h.2, spectralLineJet_memLp_false_stripOrder K z h.1 h.2]
+      exact WithTop.coe_le_coe.mpr (sub_nonneg.mpr (Int.ofNat_le.mpr (hT z hz h.1 h.2)))
+    · have hx : z.re ≤ 0 ∨ 1 ≤ z.re := by grind
+      rw [cubicZeroCount_exteriorOrder ℚ z hx h₀ h₁, cubicZeroCount_exteriorOrder K z hx h₀ h₁]
+      decide
+
+/-- A finite product of shifted linear factors grows at most exponentially in
+the width and height of the contour. -/
+private theorem cubicZeroCount_polynomialBound (T : Finset ℂ) (m : ℂ → ℕ) (c : ℂ) :
+    ∃ A : ℝ, ∃ d ≥ (0 : ℝ), ∀ z : ℂ, ‖∏ a ∈ T, (z + c - a) ^ m a‖ ≤
+      Real.exp (A + d * (|z.re| + |z.im|)) := by
+  let H (a : ℂ) := (m a : ℝ) * ‖c - a‖
+  let w (a : ℂ) := (m a : ℝ)
+  refine ⟨∑ a ∈ T, H a, ∑ a ∈ T, w a, Finset.sum_nonneg (fun _ _ ↦ Nat.cast_nonneg _), fun z ↦ ?_⟩
+  let r := |z.re| + |z.im|
+  have hf (a : ℂ) : ‖z + c - a‖ ≤ Real.exp (‖c - a‖ + r) := by
+    have hn : ‖z + c - a‖ ≤ ‖c - a‖ + r := by
+      rw [add_sub_assoc, add_comm]
+      exact (norm_add_le _ _).trans (add_le_add_right (Complex.norm_le_abs_re_add_abs_im z) _)
+    linarith [Real.add_one_le_exp (‖c - a‖ + r)]
+  calc
+    ‖∏ a ∈ T, (z + c - a) ^ m a‖ ≤ ∏ a ∈ T, ‖z + c - a‖ ^ m a := by
+      simp
+    _ ≤ ∏ a ∈ T, Real.exp (‖c - a‖ + r) ^ m a := by
+      gcongr with a ha
+      exact hf a
+    _ = Real.exp (∑ a ∈ T, H a + (∑ a ∈ T, w a) * r) := by
+      rw [Finset.sum_mul, ← Finset.sum_add_distrib, Real.exp_sum]
+      apply Finset.prod_congr rfl
+      intro a _
+      rw [← Real.exp_nat_mul]
+      congr 1
+      dsimp [H, w]
+      ring
+
+/-- For every cubic number field, its completed Dedekind zeta function vanishes
+to higher order than the rational one at infinitely many distinct points in the
+open strip. A finite exceptional divisor could be removed by a polynomial,
+whose growth preserves the factorial estimates on the rectangle edges. -/
+theorem cubicDedekindZeta_excessOrders_infinite (K : Type) [Field K] [NumberField K]
+    (hdeg : Module.finrank ℚ K = 3) :
+    {z : ℂ | 0 < z.re ∧ z.re < 1 ∧ order(ζChar(ℚ), z) < order(ζChar(K), z)}.Infinite := by
+  classical
+  intro hfin
+  let T := hfin.toFinset
+  have hT (z : ℂ) : z ∈ T ↔ 0 < z.re ∧ z.re < 1 ∧ order(ζChar(ℚ), z) < order(ζChar(K), z) :=
+    hfin.mem_toFinset
+  obtain ⟨m, hm⟩ := cubicZeroCount_clearFinitePoles K T (fun z hz h₀ h₁ ↦
+    le_of_not_gt (fun h ↦ hz ((hT z).mpr ⟨h₀, h₁, h⟩)))
+  let P (s : ℂ) := ∏ a ∈ T, (s - a) ^ m a
+  let f (z : ℂ) := P (z + 1 / 2) * ζRatio(K) (z + 1 / 2)
+  have hf : Differentiable ℂ f := hm.comp (differentiable_id.add_const _)
+  obtain ⟨A, d, hd, hP⟩ := cubicZeroCount_polynomialBound T m (1 / 2)
+  obtain ⟨c, w, hc, hw, _, he⟩ := cubicZeroCount_eulerFactors K hdeg
+  obtain ⟨D, hD, B, hr⟩ := cubicZeroCount_rightEdge K c w hc hw he
+  obtain ⟨J, hJ, hv⟩ := cubicZeroCount_verticalEdges K hD hr
+  let C := max 1 (Real.exp A)
+  let U := C * Real.exp (2 * d) * J
+  have hC : 1 ≤ C := le_max_left _ _
+  have hU : 0 < U := mul_pos (mul_pos (zero_lt_one.trans_le hC) (Real.exp_pos _)) hJ
+  have vert (n : ℕ) (z : ℂ) (hz : |z.re| = 2 * (n + 1 : ℝ)) :
+      ‖f z‖ ≤ U ^ (n + 1) / (n.factorial : ℝ) * Real.exp ((d + B) * |z.im|) := by
+    have ha : Real.exp A ≤ C ^ (n + 1) :=
+      (le_max_right 1 (Real.exp A)).trans (le_self_pow₀ hC (Nat.succ_ne_zero n))
+    have hstep : Real.exp (A + d * (|z.re| + |z.im|)) =
+        Real.exp A * Real.exp (2 * d) ^ (n + 1) * Real.exp (d * |z.im|) := by
+      rw [← Real.exp_nat_mul, ← Real.exp_add, ← Real.exp_add, hz]
+      congr 1
+      push_cast
+      ring
+    have hp := hP z
+    change ‖P (z + 1 / 2)‖ ≤ _ at hp
+    rw [hstep] at hp
+    calc
+      ‖f z‖ = ‖P (z + 1 / 2)‖ * ‖ζRatio(K) (z + 1 / 2)‖ := norm_mul _ _
+      _ ≤ (C ^ (n + 1) * Real.exp (2 * d) ^ (n + 1) * Real.exp (d * |z.im|)) *
+          (J ^ (n + 1) / (n.factorial : ℝ) * Real.exp (B * |z.im|)) :=
+        mul_le_mul (hp.trans (by gcongr)) (hv n z hz) (norm_nonneg _) (by positivity)
+      _ = _ := by
+        dsimp [U]
+        rw [mul_pow, mul_pow, add_mul, Real.exp_add]
+        ring
+  have hor (n : ℕ) : ∃ a > 0, ∃ b : ℝ, ∀ S > (0 : ℝ), ∃ lo hi : ℝ,
+      lo < -S ∧ S < hi ∧ ∀ z : ℂ, |z.re| ≤ 2 * (n + 1 : ℝ) → z.im = lo ∨ z.im = hi →
+        ‖f z‖ ≤ a * Real.exp (b * |z.im|) := by
+    let R := 2 * (n + 1 : ℝ)
+    obtain ⟨a, ha, b, hh⟩ := cubicZeroCount_horizontalEdges K c w hc he R
+      (by dsimp [R]; positivity)
+    refine ⟨Real.exp (A + d * R) * a, mul_pos (Real.exp_pos _) ha, d + b, fun S hS ↦ ?_⟩
+    obtain ⟨lo, hi, hlo, hhi, hstrip⟩ := hh S hS
+    refine ⟨lo, hi, hlo, hhi, fun z hx hy ↦ ?_⟩
+    have hp : ‖P (z + 1 / 2)‖ ≤ Real.exp (A + d * R) * Real.exp (d * |z.im|) := by
+      refine (hP z).trans ?_
+      rw [← Real.exp_add]
+      apply Real.exp_le_exp.mpr
+      nlinarith [mul_le_mul_of_nonneg_left hx hd]
+    calc
+      ‖f z‖ = ‖P (z + 1 / 2)‖ * ‖ζRatio(K) (z + 1 / 2)‖ := norm_mul _ _
+      _ ≤ (Real.exp (A + d * R) * Real.exp (d * |z.im|)) * (a * Real.exp (b * |z.im|)) :=
+        mul_le_mul hp (hstrip z hx hy) (norm_nonneg _) (by positivity)
+      _ = _ := by rw [add_mul, Real.exp_add (d * |z.im|) (b * |z.im|)]; ring
+  have hzero := cubicZeroCount_factorialEdges f hf U (d + B) hU vert hor
+  let s : ℂ := 1 + 1 / 2
+  have hs : 1 < s.re := by norm_num [s]
+  change P s * ζRatio(K) s = 0 at hzero
+  have hn : P s ≠ 0 := by
+    apply Finset.prod_ne_zero_iff.mpr
+    intro a ha
+    exact pow_ne_zero _ (sub_ne_zero.mpr (fun h ↦ ((hT a).mp ha).2.1.not_ge (h ▸ hs.le)))
+  apply (mul_ne_zero hn ?_) hzero
+  rw [cubicZeroCount_quotientValue K (by norm_num [s]) (by norm_num [s]) (cubicZeroCount_eulerNonzero K hs)]
+  exact div_ne_zero (cubicZeroCount_eulerNonzero ℚ hs) (cubicZeroCount_eulerNonzero K hs)
+
 /-- On some finite subset of the open critical strip, the zero count with multiplicity
 for ℚ(∛2) exceeds the rational zero count. The Dedekind zero-count asymptotic has
 leading coefficient proportional to the degree, which is three for the cubic field.
@@ -1507,32 +1651,17 @@ private theorem spectralLineJet_memLp_false_cubicZeroCount
       (∑ z ∈ S, order((1 : PontryaginDual C𝔽(ℚ)), z)) <
         ∑ z ∈ S, order((1 : PontryaginDual C𝔽(K)), z) := by
   classical
-  have hdeg : Module.finrank ℚ K = 3 := b.finrank.trans _hd
-  by_contra hn
-  have h (z : ℂ) (h₀ : 0 < z.re) (h₁ : z.re < 1) : order(ζChar(K), z) ≤ order(ζChar(ℚ), z) := by
-    by_contra! h
-    exact hn ⟨{z}, by simpa using And.intro h₀ h₁, by simpa using h⟩
-  obtain ⟨c, w, hc, hw, _, he⟩ := cubicZeroCount_eulerFactors K hdeg
-  obtain ⟨D, hD, B, hr⟩ := cubicZeroCount_rightEdge K c w hc hw he
-  obtain ⟨D', hD', hv⟩ := cubicZeroCount_verticalEdges K hD hr
-  have hz := cubicZeroCount_factorialEdges (fun z ↦ ζRatio(K) (z + 1 / 2))
-    ((cubicZeroCount_entireQuotient K h).comp (differentiable_id.add_const _)) D' B hD' hv
-    (fun n ↦ cubicZeroCount_horizontalEdges K c w hc he _ (by positivity))
-  let s : ℂ := 1 + 1 / 2
-  change ζRatio(K) s = 0 at hz
-  have hs : 1 < s.re := by norm_num [s]
-  rw [cubicZeroCount_quotientValue K (by norm_num [s]) (by norm_num [s]) (cubicZeroCount_eulerNonzero K hs)] at hz
-  exact div_ne_zero (cubicZeroCount_eulerNonzero ℚ hs) (cubicZeroCount_eulerNonzero K hs) hz
+  obtain ⟨z, h₀, h₁, h⟩ := (cubicDedekindZeta_excessOrders_infinite K (b.finrank.trans _hd)).nonempty
+  exact ⟨{z}, by simpa using And.intro h₀ h₁, by simpa using h⟩
 
-
-end CubicZeroCount
-
-/-- Paper: Theorem 10.2.1.1, p. 440. The trivial Hecke character of some
-number field has a completed L-function with a zero of multiplicity at least two
-in the open critical strip. The witness is the splitting field of X³ − 2. -/
-theorem exists_completedDedekindZeta_multipleZero :
-    ∃ (F : Type) (_ : Field F) (_ : NumberField F) (z : ℂ),
-      0 < z.re ∧ z.re < 1 ∧ 1 < order((1 : PontryaginDual C𝔽(F)), z) := by
+/-- A cubic subfield of the splitting field of X³ − 2 detects double zeros:
+an excess over the rational zero order forces order at least two upstairs. -/
+private theorem cubicZeroCount_splittingField_comparison :
+    let L := (Polynomial.X ^ 3 - Polynomial.C (2 : ℚ)).SplittingField
+    letI : NumberField L := ⟨⟩
+    ∃ (K : Type) (_ : Field K) (_ : NumberField K) (b : PowerBasis ℚ K),
+      b.gen ^ 3 = 2 ∧ b.dim = 3 ∧ ∀ z : ℂ, 0 < z.re → z.re < 1 →
+        order(ζChar(ℚ), z) < order(ζChar(K), z) → 1 < order(ζChar(L), z) := by
   classical
   let P : Polynomial ℚ := Polynomial.X ^ 3 - Polynomial.C 2
   let Q : Polynomial ℚ := Polynomial.X ^ 2 + Polynomial.C 3
@@ -1558,17 +1687,95 @@ theorem exists_completedDedekindZeta_multipleZero :
     simpa only [P, Polynomial.eval₂_sub, Polynomial.eval₂_pow, Polynomial.eval₂_X,
       Polynomial.eval₂_C, Polynomial.eval₂_ofNat, map_ofNat, sub_eq_zero] using he
   have hd : b.dim = 3 := by rw [AdjoinRoot.powerBasis_dim, Polynomial.natDegree_X_pow_sub_C]
-  obtain ⟨S, hS, hlt⟩ := spectralLineJet_memLp_false_cubicZeroCount K b hb hd
-  obtain ⟨z, hz, ho⟩ : ∃ z ∈ S, order((1 : PontryaginDual C𝔽(ℚ)), z) <
-      order((1 : PontryaginDual C𝔽(K)), z) := by
-    by_contra! h
-    exact hlt.not_ge (Finset.sum_le_sum h)
   have hG := spectralLineJet_memLp_false_cubicGalois P rfl hirr
   obtain ⟨ιK, ιk, hk⟩ := spectralLineJet_memLp_false_subfields P rfl hirr
   have hprimes := spectralLineJet_memLp_false_primeCounts L k K hG ιk hk ιK (b.finrank.trans hd)
+  refine ⟨K, inferInstance, inferInstance, b, hb, hd, fun z h₀ h₁ hx ↦ ?_⟩
   have hrel := spectralLineJet_memLp_false_orderRelation L k K
-    (spectralLineJet_memLp_false_zetaRelation L k K hprimes) z (hS z hz).1 (hS z hz).2
-  refine ⟨L, inferInstance, inferInstance, z, (hS z hz).1, (hS z hz).2, ?_⟩
+    (spectralLineJet_memLp_false_zetaRelation L k K hprimes) z h₀ h₁
   omega
+
+
+/-- The fixed splitting field of X³−2 has infinitely many distinct multiple
+zeros in the open strip, for its trivial Hecke character. -/
+theorem cubicSplittingField_completedDedekindZeta_multipleZeros_infinite :
+    let L := (Polynomial.X ^ 3 - Polynomial.C (2 : ℚ)).SplittingField
+    letI : NumberField L := ⟨⟩
+    {z : ℂ | 0 < z.re ∧ z.re < 1 ∧ 1 < order(ζChar(L), z)}.Infinite := by
+  let L := (Polynomial.X ^ 3 - Polynomial.C (2 : ℚ)).SplittingField
+  letI : NumberField L := ⟨⟩
+  obtain ⟨K, _, _, b, _, hd, ht⟩ := cubicZeroCount_splittingField_comparison
+  change {z : ℂ | 0 < z.re ∧ z.re < 1 ∧ 1 < order(ζChar(L), z)}.Infinite
+  apply (cubicDedekindZeta_excessOrders_infinite K (b.finrank.trans hd)).mono
+  rintro z ⟨h₀, h₁, hz⟩
+  exact ⟨h₀, h₁, ht z h₀ h₁ hz⟩
+
+/-- Reflection and local finiteness of the divisor turn infinitely many
+multiple zeros in the open strip into unbounded positive ordinates. -/
+private theorem cubicZeroCount_unbounded_of_infinite (E : Type) [Field E] [NumberField E]
+    (hi : {z : ℂ | 0 < z.re ∧ z.re < 1 ∧ 1 < order(ζChar(E), z)}.Infinite) (B : ℝ) :
+    ∃ z : ℂ, B < z.im ∧ 0 < z.re ∧ z.re < 1 ∧ 1 < order(ζChar(E), z) := by
+  classical
+  by_contra! h
+  let S := {z : ℂ | 0 < z.re ∧ z.re < 1 ∧ 1 < order(ζChar(E), z)}
+  have hb : ∀ z ∈ S, z.im ≤ B := by
+    rintro z ⟨h₀, h₁, hm⟩
+    by_contra! hn
+    exact (h z hn h₀ h₁).not_gt hm
+  have hsym : ∀ z ∈ S, 1 - z ∈ S := by
+    rintro z ⟨h₀, h₁, hm⟩
+    refine ⟨by simp; linarith, by simp; exact h₀,?_⟩
+    rw [cubicZeroCount_reflectedOrder]
+    exact hm
+  let D := Metric.closedBall (0 : ℂ) (1 + |B|)
+  have hD : IsCompact D := isCompact_closedBall _ _
+  have hSD (z : ℂ) (hz : z ∈ S) : z ∈ D := by
+    have hpos := hb z hz
+    have hneg := hb (1 - z) (hsym z hz)
+    simp at hneg
+    have hi : |z.im| ≤ |B| := abs_le.mpr ⟨by linarith [le_abs_self B],by linarith [le_abs_self B]⟩
+    have hx : 0 < z.re ∧ z.re < 1 := ⟨hz.1, hz.2.1⟩
+    change dist z 0 ≤ 1 + |B|
+    rw [dist_zero_right]
+    exact (Complex.norm_le_abs_re_add_abs_im z).trans (add_le_add
+      (by rw [abs_of_pos hx.1]; exact hx.2.le) hi)
+  have hm : MeromorphicOn completedζ(E) D := fun z _ ↦ (continuedCompletedHeckeL_spec ζChar(E)).1.meromorphicOn z (mem_univ z)
+  apply hi
+  apply ((MeromorphicOn.divisor completedζ(E) D).finiteSupport hD).subset
+  intro z hz
+  change MeromorphicOn.divisor completedζ(E) D z ≠ 0
+  rw [hm.divisor_apply (hSD z hz)]
+  have hp : 1 < order(ζChar(E), z) := hz.2.2
+  intro he
+  rw [he] at hp
+  simp at hp
+
+/-- Positive ordinates of genuine multiple zeros of the fixed completed
+Dedekind zeta function are unbounded. -/
+theorem cubicSplittingField_completedDedekindZeta_multipleZeros_unbounded (B : ℝ) :
+    let L := (Polynomial.X ^ 3 - Polynomial.C (2 : ℚ)).SplittingField
+    letI : NumberField L := ⟨⟩
+    ∃ z : ℂ, B < z.im ∧ 0 < z.re ∧ z.re < 1 ∧ 1 < order(ζChar(L), z) := by
+  let L := (Polynomial.X ^ 3 - Polynomial.C (2 : ℚ)).SplittingField
+  letI : NumberField L := ⟨⟩
+  exact cubicZeroCount_unbounded_of_infinite L cubicSplittingField_completedDedekindZeta_multipleZeros_infinite B
+
+end CubicZeroCount
+
+/-- Paper: Theorem 10.2.1.1, p. 440. The trivial Hecke character of some
+number field has a completed L-function with a zero of multiplicity at least two
+in the open critical strip. The witness is the splitting field of X³ − 2. -/
+theorem exists_completedDedekindZeta_multipleZero :
+    ∃ (F : Type) (_ : Field F) (_ : NumberField F) (z : ℂ),
+      0 < z.re ∧ z.re < 1 ∧ 1 < order((1 : PontryaginDual C𝔽(F)), z) := by
+  classical
+  let L := (Polynomial.X ^ 3 - Polynomial.C (2 : ℚ)).SplittingField
+  letI : NumberField L := ⟨⟩
+  obtain ⟨K, _, _, b, hb, hd, ht⟩ := cubicZeroCount_splittingField_comparison
+  obtain ⟨S, hS, hlt⟩ := spectralLineJet_memLp_false_cubicZeroCount K b hb hd
+  obtain ⟨z, hz, ho⟩ : ∃ z ∈ S, order((1 : PontryaginDual C𝔽(ℚ)), z) < order((1 : PontryaginDual C𝔽(K)), z) := by
+    by_contra! h
+    exact hlt.not_ge (Finset.sum_le_sum h)
+  exact ⟨L, inferInstance, inferInstance, z,(hS z hz).1,(hS z hz).2, ht z (hS z hz).1 (hS z hz).2 ho⟩
 
 end RiemannMasullo

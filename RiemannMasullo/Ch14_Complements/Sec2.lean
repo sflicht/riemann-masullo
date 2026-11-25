@@ -19,6 +19,9 @@ import Mathlib.RingTheory.KrullDimension.Field
 import Mathlib.RingTheory.KrullDimension.Polynomial
 import Mathlib.RingTheory.NoetherNormalization
 import Mathlib.RingTheory.Unramified.LocalStructure
+import Mathlib.FieldTheory.Finite.Extension
+import RiemannMasullo.ForMathlib.NumberTheory.WeilBound.EtaleChart
+import RiemannMasullo.ForMathlib.AlgebraicGeometry.CurvePoints
 
 /-!
 # §§14.2–14.3: Global function fields and higher rank
@@ -1145,16 +1148,6 @@ theorem curveZeta_extensionPointCount (f : X ⟶ Spec (.of k))
     rfl
   rw [hstep1, hstep2, hstep3]
 
-/-- Paper: §14.2, p. 535. The number of degree-m closed points is
-q^m/m with error O(q^(m/2)/m) as m tends to infinity.
-Deviation: The Big-O constant here is for the given curve. The paper also
-specifies uniformity in the curve through its genus. -/
-theorem curveZeta_closedPointsOfDegree_asymptotic (f : X ⟶ Spec (.of k))
-    [SmoothOfRelativeDimension 1 f] [IsProper f] [GeometricallyConnected f] :
-    let q : ℝ := Nat.card k
-    (fun m : ℕ ↦ (curveZetaClosedPointCount f m : ℝ) - q ^ m / m) =O[Filter.atTop]
-      (fun m : ℕ ↦ Real.sqrt (q ^ m) / m) := by sorry
-
 /-- A geometric sum in the base `q ≥ 2` is at most twice its last term. -/
 private theorem curveZeta_closedPointsOfDegree_bound_of_weil_geom (q : ℝ) (hq : 2 ≤ q) (n : ℕ) :
     ∑ b ∈ Finset.Icc 1 n, q ^ b ≤ 2 * q ^ n := by
@@ -1294,6 +1287,370 @@ theorem curveZeta_closedPointsOfDegree_bound_of_weil (f : X ⟶ Spec (.of k))
     exact_mod_cast h
   exact curveZeta_closedPointsOfDegree_bound_of_weil_aux q g
     (fun d ↦ (curveZetaClosedPointCount f d : ℝ)) hq (Nat.cast_nonneg g) hW m hm
+
+/-- The composite `Spec κ(x) → X → Spec k` is `Spec` of the structure map `k → κ(x)`. -/
+private theorem curveZeta_fromSpecResidueField_comp {k : Type u} [Field k]
+    {X : Scheme.{u}} (f : X ⟶ Spec (.of k)) (x : X) :
+    X.fromSpecResidueField x ≫ f = Spec.map (CommRingCat.ofHom (algebraMap k _) ≫
+      (Scheme.Spec.residueFieldIso (.of k) (f x)).inv ≫ f.residueFieldMap x) := by
+  rw [← Scheme.Hom.SpecMap_residueFieldMap_fromSpecResidueField,
+    ← Scheme.Spec.map_residueFieldIso_inv_eq_fromSpecResidueField]
+  simp only [Spec.map_comp, Category.assoc]
+
+/-- A point `Spec K → X` through `x` lies over `k` exactly when its field map is
+k-linear for the structure map `k → κ(x)`. -/
+private theorem curveZeta_extensionPointCount_isOver_iff {k : Type u} [Field k]
+    {X : Scheme.{u}} (f : X ⟶ Spec (.of k)) (x : X)
+    (K : Type u) [Field K] [Algebra k K] (φ : X.residueField x ⟶ CommRingCat.of K) :
+    (Spec.map φ ≫ X.fromSpecResidueField x) ≫ f =
+        Spec.map (CommRingCat.ofHom (algebraMap k K)) ↔
+      φ.hom.comp (CommRingCat.ofHom (algebraMap k _) ≫
+      (Scheme.Spec.residueFieldIso (.of k) (f x)).inv ≫ f.residueFieldMap x).hom =
+        algebraMap k K := by
+  rw [Category.assoc, curveZeta_fromSpecResidueField_comp, ← Spec.map_comp,
+    Spec.map_inj]
+  constructor
+  · intro h; exact congrArg CommRingCat.Hom.hom h
+  · intro h; ext a; exact congrArg (· a) h
+
+/-- Reduction for `curveZeta_pointCount_weil_bound`: finitely many degrees, and the `+ 1`, are
+absorbed into the constant. For any real sequence `N` and `q ≥ 1`, an estimate
+`|N r - q ^ r| ≤ C √(q ^ r)` for all `r ≥ r₀` gives `g : ℕ` with
+`|N r - (q ^ r + 1)| ≤ 2 g √(q ^ r)` for every `r ≥ 1`. -/
+private theorem curveZeta_pointCount_weil_bound_of_eventually (q : ℝ) (hq : 1 ≤ q)
+    (N : ℕ → ℝ) (C : ℝ) (r₀ : ℕ)
+    (h : ∀ r : ℕ, r₀ ≤ r → |N r - q ^ r| ≤ C * Real.sqrt (q ^ r)) :
+    ∃ g : ℕ, ∀ r : ℕ, 0 < r → |N r - (q ^ r + 1)| ≤ 2 * g * Real.sqrt (q ^ r) := by
+  set B : ℝ := ∑ r ∈ Finset.range r₀, |N r - (q ^ r + 1)| with hBdef
+  refine ⟨⌈(max C 0 + 1 + B) / 2⌉₊, fun r _ => ?_⟩
+  have hs1 : 1 ≤ Real.sqrt (q ^ r) := Real.one_le_sqrt.mpr (one_le_pow₀ hq)
+  have hS : 0 ≤ Real.sqrt (q ^ r) := Real.sqrt_nonneg _
+  have hB0 : 0 ≤ B := Finset.sum_nonneg fun _ _ => abs_nonneg _
+  have hg : max C 0 + 1 + B ≤ 2 * (⌈(max C 0 + 1 + B) / 2⌉₊ : ℝ) := by
+    have := Nat.le_ceil ((max C 0 + 1 + B) / 2); linarith
+  have hC0 := le_max_right C 0
+  calc |N r - (q ^ r + 1)| ≤ (max C 0 + 1 + B) * Real.sqrt (q ^ r) := ?_
+    _ ≤ _ := mul_le_mul_of_nonneg_right hg hS
+  rcases lt_or_ge r r₀ with hr | hr
+  · have : |N r - (q ^ r + 1)| ≤ B :=
+      Finset.single_le_sum (f := fun r => |N r - (q ^ r + 1)|) (fun _ _ => abs_nonneg _)
+        (Finset.mem_range.mpr hr)
+    nlinarith
+  · have h1 := h r hr
+    have h2 : |N r - (q ^ r + 1)| ≤ |N r - q ^ r| + 1 := by
+      calc |N r - (q ^ r + 1)| = |(N r - q ^ r) + (-1)| := by ring_nf
+        _ ≤ |N r - q ^ r| + |(-1 : ℝ)| := abs_add_le _ _
+        _ = _ := by simp
+    have h3 : C * Real.sqrt (q ^ r) ≤ max C 0 * Real.sqrt (q ^ r) :=
+      mul_le_mul_of_nonneg_right (le_max_left _ _) hS
+    nlinarith
+
+/-- A finite field has an extension of every positive degree in its own universe (the splitting
+field of `X ^ (q ^ r) - X`). -/
+private theorem curveZeta_pointCount_weil_bound_exists_extension (r : ℕ) (hr : 0 < r) :
+    ∃ (K : Type u) (_ : Field K) (_ : Algebra k K) (_ : Finite K),
+      Module.finrank k K = r := by
+  classical
+  obtain ⟨p, hp⟩ := CharP.exists k
+  have := hp
+  have : Fact p.Prime := ⟨CharP.char_is_prime k p⟩
+  have : NeZero r := ⟨hr.ne'⟩
+  let P : Polynomial k := Polynomial.X ^ Nat.card k ^ r - Polynomial.X
+  let e := Polynomial.IsSplittingField.algEquiv (FiniteField.Extension k p r) P
+  have : Module.Finite k P.SplittingField := inferInstance
+  refine ⟨P.SplittingField, inferInstance, inferInstance, Module.finite_of_finite k, ?_⟩
+  rw [← e.toLinearEquiv.finrank_eq]
+  exact FiniteField.finrank_extension k p r
+
+
+/-- Reduction for `curveZeta_pointCount_weil_bound` to a point-count estimate over large
+extensions: if for every finite extension `K / k` of degree at least `r₀` the number of
+`k`-morphisms `Spec K → X` is within `C √#K` of `#K`, then the conclusion of
+`curveZeta_pointCount_weil_bound` holds. Uses `curveZeta_extensionPointCount`. -/
+private theorem curveZeta_pointCount_weil_bound_of_points (f : X ⟶ Spec (.of k))
+    [SmoothOfRelativeDimension 1 f] [IsProper f] [GeometricallyConnected f] (C : ℝ) (r₀ : ℕ)
+    (h : ∀ (K : Type u) [Field K] [Algebra k K] [Finite K], r₀ ≤ Module.finrank k K →
+      |(Nat.card {p : Spec (.of K) ⟶ X //
+          p ≫ f = Spec.map (CommRingCat.ofHom (algebraMap k K))} : ℝ) - Nat.card K| ≤
+        C * Real.sqrt (Nat.card K)) :
+    let q : ℝ := Nat.card k
+    let N (r : ℕ) : ℝ := ∑ d ∈ r.divisors, (d : ℝ) * curveZetaClosedPointCount f d
+    ∃ g : ℕ, ∀ r : ℕ, 0 < r → |N r - (q ^ r + 1)| ≤ 2 * g * Real.sqrt (q ^ r) := by
+  intro q N
+  have hq : (1 : ℝ) ≤ q := by
+    have : 1 ≤ Nat.card k := Finite.one_lt_card.le
+    change (1 : ℝ) ≤ (Nat.card k : ℝ)
+    exact_mod_cast this
+  refine curveZeta_pointCount_weil_bound_of_eventually q hq N C (max r₀ 1) fun r hr => ?_
+  obtain ⟨K, _, _, _, hK⟩ :=
+    curveZeta_pointCount_weil_bound_exists_extension (k := k) r (by omega)
+  have hcardK : Nat.card K = Nat.card k ^ r := by
+    have : Module.Finite k K := Module.Finite.of_finite
+    rw [Module.natCard_eq_pow_finrank (K := k), hK]
+  have hN : N r = (Nat.card {p : Spec (.of K) ⟶ X //
+      p ≫ f = Spec.map (CommRingCat.ofHom (algebraMap k K))} : ℝ) := by
+    rw [curveZeta_extensionPointCount f K, hK, Nat.cast_sum]
+    exact Finset.sum_congr rfl fun d _ => (Nat.cast_mul _ _).symm
+  have h1 := h K (by rw [hK]; omega)
+  rw [hcardK] at h1
+  rw [hN]
+  push_cast at h1
+  exact h1
+
+/-- An étale chart of a smooth curve: every point has an affine neighbourhood `V` with an étale
+ring map `k[t] → Γ(X, V)` extending the `k`-algebra structure. -/
+private theorem curveZeta_pointCount_weil_bound_chart (f : X ⟶ Spec (.of k))
+    [SmoothOfRelativeDimension 1 f] (x : X) :
+    ∃ (V : X.Opens) (_ : IsAffineOpen V) (_ : x ∈ V) (g : Polynomial k →+* Γ(X, V)),
+      g.Etale ∧ ∀ a : k, g (Polynomial.C a) =
+        ((Scheme.ΓSpecIso (.of k)).inv ≫ f.appLE ⊤ V le_top).hom a := by
+  obtain ⟨U, hU, V, hV, hx, e, hf⟩ :=
+    SmoothOfRelativeDimension.exists_isStandardSmoothOfRelativeDimension (n := 1) (f := f) x
+  have hUtop : U = ⊤ := eq_top_iff.mpr fun z _ ↦ by
+    rw [Subsingleton.elim z (f x)]
+    exact e hx
+  subst hUtop
+  obtain ⟨g, hgC, hg⟩ := RingHom.IsStandardSmoothOfRelativeDimension.exists_etale_mvPolynomial hf
+  let φ : Γ(Spec (.of k), ⊤) ≃+* k := (Scheme.ΓSpecIso (.of k)).commRingCatIsoToRingEquiv
+  let ι : Polynomial k ≃+* MvPolynomial (Fin 1) Γ(Spec (.of k), ⊤) :=
+    (Polynomial.mapEquiv φ.symm).trans
+      ((MvPolynomial.finSuccEquiv Γ(Spec (.of k), ⊤) 0).trans
+        (Polynomial.mapAlgEquiv (MvPolynomial.isEmptyAlgEquiv Γ(Spec (.of k), ⊤) (Fin 0)))).symm.toRingEquiv
+  refine ⟨V, hV, hx, g.comp ι.toRingHom, RingHom.Etale.respectsIso.right g ι hg, fun a => ?_⟩
+  have h1 : ι (Polynomial.C a) = MvPolynomial.C (φ.symm a) := by
+    apply ι.symm.injective
+    rw [RingEquiv.symm_apply_apply]
+    show Polynomial.C a = (Polynomial.mapEquiv φ.symm).symm
+      ((Polynomial.mapAlgEquiv (MvPolynomial.isEmptyAlgEquiv _ (Fin 0)))
+        ((MvPolynomial.finSuccEquiv Γ(Spec (.of k), ⊤) 0) (MvPolynomial.C (φ.symm a))))
+    have hC : (MvPolynomial.finSuccEquiv Γ(Spec (.of k), ⊤) 0) (MvPolynomial.C (φ.symm a)) =
+        Polynomial.C (MvPolynomial.C (φ.symm a)) := by
+      have h := RingHom.congr_fun
+        (MvPolynomial.finSuccEquiv_comp_C_eq_C (R := Γ(Spec (.of k), ⊤)) 0) (φ.symm a)
+      have h2 := congrArg (MvPolynomial.finSuccEquiv Γ(Spec (.of k), ⊤) 0) h
+      simp only [RingHom.coe_comp, Function.comp_apply, RingHom.coe_coe,
+        AlgEquiv.apply_symm_apply] at h2
+      exact h2.symm
+    rw [hC]
+    simp
+  simp only [RingHom.coe_comp, Function.comp_apply, RingEquiv.toRingHom_eq_coe,
+    RingEquiv.coe_toRingHom, h1]
+  rw [← RingHom.comp_apply, hgC]
+  rfl
+
+/-- The affine charts of a smooth curve have Krull dimension at most one. -/
+private theorem curveZeta_pointCount_weil_bound_dim (f : X ⟶ Spec (.of k))
+    [SmoothOfRelativeDimension 1 f] (x : X) :
+    ∃ W : X.Opens, IsAffineOpen W ∧ x ∈ W ∧ ringKrullDim Γ(X, W) ≤ 1 := by
+  obtain ⟨V, hV, hx, g, hg, -⟩ := curveZeta_pointCount_weil_bound_chart f x
+  refine ⟨V, hV, hx, ?_⟩
+  algebraize [g]
+  have h1 : ringKrullDim Γ(X, V) ≤ ringKrullDim (Polynomial k) := by
+    refine Order.krullDim_le_of_strictMono
+      (fun q : PrimeSpectrum Γ(X, V) ↦ PrimeSpectrum.comap (algebraMap (Polynomial k) _) q)
+      fun a b hab ↦ ?_
+    have hle : a.asIdeal ≤ b.asIdeal := hab.le
+    refine lt_of_le_of_ne (show a.asIdeal.comap (algebraMap (Polynomial k) _) ≤ b.asIdeal.comap _
+      from Ideal.comap_mono hle) fun h ↦ hab.ne ?_
+    ext1
+    exact Algebra.QuasiFinite.eq_of_le_of_under_eq (R := Polynomial k) a.asIdeal b.asIdeal hle
+      (congrArg PrimeSpectrum.asIdeal h)
+  rw [Polynomial.ringKrullDim_of_isNoetherianRing, ringKrullDim_eq_zero_of_field] at h1
+  simpa using h1
+
+/-- The points over `k` lying over a finite set of points of `X` are bounded independently of the
+field of values: a point of `X` with residue field `κ(x)` carries at most `[κ(x) : k]` of them. -/
+private theorem curveZeta_pointCount_weil_bound_outside (f : X ⟶ Spec (.of k)) (S : Set X)
+    (hS : S.Finite) :
+    ∃ D : ℕ, ∀ (K : Type u) [Field K] [Algebra k K] [Finite K],
+      Nat.card {p : Spec (.of K) ⟶ X // p ≫ f = Spec.map (CommRingCat.ofHom (algebraMap k K)) ∧
+        p (IsLocalRing.closedPoint K) ∈ S} ≤ D := by
+  classical
+  let alg : ∀ x : X, k →+* X.residueField x := fun x => (CommRingCat.ofHom (algebraMap k _) ≫
+      (Scheme.Spec.residueFieldIso (.of k) (f x)).inv ≫ f.residueFieldMap x).hom
+  let T := hS.toFinset
+  refine ⟨∑ x ∈ T, @Module.finrank k (X.residueField x) _ _ (alg x).toAlgebra.toModule,
+    fun K _ _ _ => ?_⟩
+  let G : X → Type u := fun x => {φ : X.residueField x ⟶ CommRingCat.of K //
+    φ.hom.comp (alg x) = algebraMap k K}
+  have hG : ∀ x, Finite (G x) ∧ Nat.card (G x) ≤
+      @Module.finrank k (X.residueField x) _ _ (alg x).toAlgebra.toModule := by
+    intro x
+    letI := (alg x).toAlgebra
+    let e : G x ≃ (X.residueField x →ₐ[k] K) :=
+      { toFun := fun φ ↦ { φ.1.hom with commutes' := fun r ↦ congrArg (· r) φ.2 }
+        invFun := fun ψ ↦ ⟨CommRingCat.ofHom ψ.toRingHom, RingHom.ext ψ.commutes⟩
+        left_inv := fun _ ↦ rfl
+        right_inv := fun _ ↦ rfl }
+    rw [Nat.card_congr e]
+    rcases isEmpty_or_nonempty (X.residueField x →ₐ[k] K) with h | h
+    · exact ⟨e.finite_iff.2 inferInstance, by simp⟩
+    · obtain ⟨ψ⟩ := h
+      have : Finite (X.residueField x) := Finite.of_injective _ ψ.toRingHom.injective
+      have : Module.Finite k (X.residueField x) := Module.Finite.of_finite
+      exact ⟨e.finite_iff.2 inferInstance, card_algHom_le_finrank k _ K⟩
+  let Ψ : {p : Spec (.of K) ⟶ X // p ≫ f = Spec.map (CommRingCat.ofHom (algebraMap k K)) ∧
+      p (IsLocalRing.closedPoint K) ∈ S} → Σ x : T, G x := fun p =>
+    ⟨⟨(Scheme.SpecToEquivOfField K X p.1).1, by
+        rw [Set.Finite.mem_toFinset]; exact p.2.2⟩,
+      ⟨(Scheme.SpecToEquivOfField K X p.1).2, by
+        have h := p.2.1
+        conv_lhs at h => rw [← (Scheme.SpecToEquivOfField K X).symm_apply_apply p.1]
+        exact (curveZeta_extensionPointCount_isOver_iff f _ K _).1 h⟩⟩
+  have hΨ : Function.Injective Ψ := by
+    intro p p' h
+    apply Subtype.ext
+    apply (Scheme.SpecToEquivOfField K X).injective
+    have h1 := congrArg (fun z : Σ x : T, G x =>
+      (⟨z.1.1, z.2.1⟩ : Σ x : X, X.residueField x ⟶ CommRingCat.of K)) h
+    exact h1
+  have : ∀ x : T, Finite (G x) := fun x => (hG x).1
+  calc Nat.card _ ≤ Nat.card (Σ x : T, G x) := Nat.card_le_card_of_injective _ hΨ
+    _ = ∑ x : T, Nat.card (G x) := Nat.card_sigma
+    _ ≤ ∑ x : T, @Module.finrank k (X.residueField x) _ _ (alg x).toAlgebra.toModule :=
+        Finset.sum_le_sum fun x _ => (hG x).2
+    _ = _ := Finset.sum_coe_sort T (fun x => @Module.finrank k (X.residueField x) _ _
+        (alg x).toAlgebra.toModule)
+
+/-- **Weil's bound for the curve**, in the form required by
+`curveZeta_pointCount_weil_bound_of_points`: points over large finite extensions `K` number
+`#K + O(√#K)`. An étale chart `V` gives, through `RiemannMasullo.WeilBound.weil_etale`, the bound on
+a basic open `V' ⊆ V`; the finitely many points outside `V'` contribute a bounded amount. -/
+private theorem curveZeta_pointCount_weil_bound_main (f : X ⟶ Spec (.of k))
+    [SmoothOfRelativeDimension 1 f] [IsProper f] [GeometricallyConnected f] :
+    ∃ (C : ℝ) (r₀ : ℕ), ∀ (K : Type u) [Field K] [Algebra k K] [Finite K],
+      r₀ ≤ Module.finrank k K →
+      |(Nat.card {p : Spec (.of K) ⟶ X //
+          p ≫ f = Spec.map (CommRingCat.ofHom (algebraMap k K))} : ℝ) - Nat.card K| ≤
+        C * Real.sqrt (Nat.card K) := by
+  classical
+  have : Fintype k := Fintype.ofFinite k
+  have : Smooth f := SmoothOfRelativeDimension.smooth 1 f
+  -- `X` and its base change to `k̄` are integral
+  have : ConnectedSpace X := GeometricallyConnected.connectedSpace_of_subsingleton f
+  have hXint : IsIntegral X := isIntegral_of_smoothOfRelativeDimension_one f
+  set L := AlgebraicClosure k
+  set g := Spec.map (CommRingCat.ofHom (algebraMap k L))
+  have : ConnectedSpace ↥(Limits.pullback f g : Scheme.{u}) :=
+    GeometricallyConnected.connectedSpace_of_subsingleton (Limits.pullback.snd f g)
+  have : IsIntegral (Limits.pullback f g : Scheme.{u}) :=
+    isIntegral_of_smoothOfRelativeDimension_one (Limits.pullback.snd f g)
+  -- an étale chart
+  obtain ⟨x₀⟩ : Nonempty X := inferInstance
+  obtain ⟨V, hV, hx₀, φ, hφ, hφC⟩ := curveZeta_pointCount_weil_bound_chart f x₀
+  have : Nonempty V := ⟨⟨x₀, hx₀⟩⟩
+  let := sectionsAlgebra f V
+  let : Algebra (Polynomial k) Γ(X, V) := φ.toAlgebra
+  have : IsScalarTower k (Polynomial k) Γ(X, V) :=
+    IsScalarTower.of_algebraMap_eq fun a => (hφC a).symm
+  have : Algebra.Etale (Polynomial k) Γ(X, V) := hφ
+  have : IsDomain (TensorProduct k Γ(X, V) L) := isDomain_tensor_of_isIntegral_pullback f hV
+  obtain ⟨s, hs0, C, n₀, hW⟩ := RiemannMasullo.WeilBound.weil_etale.{u, u, u} (k := k) (B := Γ(X, V))
+  -- the basic open `V'`
+  set s' : Γ(X, V) := algebraMap (Polynomial k) Γ(X, V) s
+  have hs'0 : s' ≠ 0 :=
+    (map_ne_zero_iff _ RiemannMasullo.WeilBound.algebraMap_injective_of_etale).2 hs0
+  set V' := X.basicOpen s'
+  have hV' : IsAffineOpen V' := hV.basicOpen s'
+  have hV'ne : (V' : Set X).Nonempty := by
+    by_contra h
+    rw [Set.not_nonempty_iff_eq_empty] at h
+    apply hs'0
+    rw [← basicOpen_eq_bot_iff]
+    exact SetLike.coe_injective (h.trans TopologicalSpace.Opens.coe_bot.symm)
+  have : CompactSpace X := QuasiCompact.compactSpace_of_compactSpace f
+  have : IsLocallyNoetherian X := LocallyOfFiniteType.isLocallyNoetherian f
+  have hcompl : ((V' : Set X)ᶜ).Finite :=
+    finite_compl_of_ringKrullDim_le_one (curveZeta_pointCount_weil_bound_dim f) hV'ne
+  obtain ⟨D, hD⟩ := curveZeta_pointCount_weil_bound_outside f _ hcompl
+  -- `Γ(X, V')` is `Γ(X, V)[1/s']`
+  have hloc := hV.isLocalization_basicOpen s'
+  let e : Localization.Away s' ≃ₐ[Γ(X, V)] Γ(X, V') :=
+    IsLocalization.algEquiv (Submonoid.powers s') _ _
+  let := sectionsAlgebra f V'
+  let ek : Localization.Away s' ≃ₐ[k] Γ(X, V') :=
+    AlgEquiv.ofRingEquiv (f := e.toRingEquiv) fun a => by
+      rw [IsScalarTower.algebraMap_apply k Γ(X, V) (Localization.Away s')]
+      have hres : (Scheme.ΓSpecIso (.of k)).inv ≫ f.appLE ⊤ V le_top ≫
+          X.presheaf.map (homOfLE <| X.basicOpen_le s' : V' ⟶ V).op =
+          (Scheme.ΓSpecIso (.of k)).inv ≫ f.appLE ⊤ V' le_top :=
+        congrArg ((Scheme.ΓSpecIso (.of k)).inv ≫ ·)
+          (Scheme.Hom.appLE_map f le_top (homOfLE <| X.basicOpen_le s' : V' ⟶ V).op)
+      have := congrArg (fun h => CommRingCat.Hom.hom h a) hres
+      simp only [AlgEquiv.coe_toRingEquiv, AlgEquiv.commutes]
+      exact this
+  refine ⟨C + D, n₀, fun K _ _ _ hK => ?_⟩
+  have : Fintype K := Fintype.ofFinite K
+  have h1 := hW K hK
+  have hcount : Nat.card (Localization.Away s' →ₐ[k] K) = Nat.card (Γ(X, V') →ₐ[k] K) :=
+    Nat.card_congr (AlgEquiv.arrowCongr ek AlgEquiv.refl)
+  have hin := card_points_affineOpen f hV' K
+  have hout := hD K
+  have : Finite (Spec (.of K) ⟶ X) := finite_spec_hom f K
+  set P : (Spec (.of K) ⟶ X) → Prop := fun p => p ≫ f = Spec.map (CommRingCat.ofHom (algebraMap k K))
+  set Q : (Spec (.of K) ⟶ X) → Prop := fun p => p (IsLocalRing.closedPoint K) ∈ V'
+  have hsplit : Nat.card {p // P p} = Nat.card {p // P p ∧ Q p} + Nat.card {p // P p ∧ ¬ Q p} := by
+    rw [← Nat.card_sum]
+    exact Nat.card_congr ((Equiv.sumCompl (fun p : {p // P p} => Q p.1)).symm.trans
+      (Equiv.sumCongr (Equiv.subtypeSubtypeEquivSubtypeInter P Q)
+        (Equiv.subtypeSubtypeEquivSubtypeInter P (fun p => ¬ Q p))))
+  have hNin : (Nat.card {p // P p ∧ Q p} : ℝ) = Nat.card (Localization.Away s' →ₐ[k] K) := by
+    rw [hcount]; exact_mod_cast hin
+  have hNout : (Nat.card {p // P p ∧ ¬ Q p} : ℝ) ≤ D := by exact_mod_cast hout
+  have hNout0 : (0 : ℝ) ≤ Nat.card {p // P p ∧ ¬ Q p} := by positivity
+  have hsq : (1 : ℝ) ≤ Real.sqrt (Nat.card K) := by
+    rw [Real.one_le_sqrt]; exact_mod_cast Nat.one_le_iff_ne_zero.2 Nat.card_pos.ne'
+  rw [Nat.card_eq_fintype_card (α := K)] at hsq ⊢
+  change |(Nat.card {p // P p} : ℝ) - _| ≤ _
+  rw [hsplit, Nat.cast_add, hNin]
+  calc |(Nat.card (Localization.Away s' →ₐ[k] K) : ℝ) + Nat.card {p // P p ∧ ¬ Q p} -
+        Fintype.card K|
+      ≤ |(Nat.card (Localization.Away s' →ₐ[k] K) : ℝ) - Fintype.card K| +
+          Nat.card {p // P p ∧ ¬ Q p} := by
+        rw [show (Nat.card (Localization.Away s' →ₐ[k] K) : ℝ) + Nat.card {p // P p ∧ ¬ Q p} -
+          Fintype.card K = ((Nat.card (Localization.Away s' →ₐ[k] K) : ℝ) - Fintype.card K) +
+          Nat.card {p // P p ∧ ¬ Q p} by ring]
+        refine (abs_add_le _ _).trans ?_
+        rw [abs_of_nonneg hNout0]
+    _ ≤ C * Real.sqrt (Fintype.card K) + D * Real.sqrt (Fintype.card K) := by
+        gcongr
+        exact hNout.trans (le_mul_of_one_le_right (by positivity) hsq)
+    _ = (C + D) * Real.sqrt (Fintype.card K) := by ring
+
+/-- Paper: §14.2, p. 535 (the Weil bound the paper cites from [TsV, Ch. 2.3, (2.3.2), p. 177]).
+The Hasse–Weil estimate: there is `g : ℕ` (the genus of the curve) such that for every `r ≥ 1`
+the number `N r = ∑_{d ∣ r} d B_d` satisfies `|N r - (q^r + 1)| ≤ 2 g q^{r/2}`, where `q = #k`
+and `B_d = curveZetaClosedPointCount f d` is the number of closed points of degree `d`.
+By `curveZeta_extensionPointCount`, `N r` is the number of points of the curve over the
+extension of `k` of degree `r`, so this is Weil's theorem (the Riemann hypothesis for
+smooth projective geometrically connected curves over finite fields), which is not in Mathlib.
+Deviation: the genus is only asserted to exist, not defined; the paper uses the genus of the
+curve, for which the bound holds. -/
+theorem curveZeta_pointCount_weil_bound (f : X ⟶ Spec (.of k))
+    [SmoothOfRelativeDimension 1 f] [IsProper f] [GeometricallyConnected f] :
+    let q : ℝ := Nat.card k
+    let N (r : ℕ) : ℝ := ∑ d ∈ r.divisors, (d : ℝ) * curveZetaClosedPointCount f d
+    ∃ g : ℕ, ∀ r : ℕ, 0 < r → |N r - (q ^ r + 1)| ≤ 2 * g * Real.sqrt (q ^ r) := by
+  obtain ⟨C, r₀, h⟩ := curveZeta_pointCount_weil_bound_main f
+  exact curveZeta_pointCount_weil_bound_of_points f C r₀ fun K _ _ _ hK => h K hK
+
+/-- Paper: §14.2, p. 535. The number of degree-m closed points is
+q^m/m with error O(q^(m/2)/m) as m tends to infinity.
+Deviation: The Big-O constant here is for the given curve. The paper also
+specifies uniformity in the curve through its genus. -/
+theorem curveZeta_closedPointsOfDegree_asymptotic (f : X ⟶ Spec (.of k))
+    [SmoothOfRelativeDimension 1 f] [IsProper f] [GeometricallyConnected f] :
+    let q : ℝ := Nat.card k
+    (fun m : ℕ ↦ (curveZetaClosedPointCount f m : ℝ) - q ^ m / m) =O[Filter.atTop]
+      (fun m : ℕ ↦ Real.sqrt (q ^ m) / m) := by
+  intro q
+  obtain ⟨g, hW⟩ := curveZeta_pointCount_weil_bound f
+  refine Asymptotics.IsBigO.of_bound (5 + 6 * (g : ℝ)) ?_
+  filter_upwards [Filter.eventually_ge_atTop 1] with m hm
+  have h := curveZeta_closedPointsOfDegree_bound_of_weil f g hW m hm
+  rw [Real.norm_eq_abs, Real.norm_eq_abs,
+    abs_of_nonneg (show (0 : ℝ) ≤ Real.sqrt (q ^ m) / m by positivity), ← mul_div_assoc]
+  exact h
 
 /-- Paper: (14.2.0.1), p. 534. On `Re(s) > 1` the finite products over closed
 points converge to the zeta Euler product.

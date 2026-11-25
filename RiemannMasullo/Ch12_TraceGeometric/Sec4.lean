@@ -3904,8 +3904,9 @@ private theorem sLocalTrace_unit_norm (ξ : Hₛ) : sIdeleNorm F S ξ.val = 1 :=
   obtain ⟨γ, hγ, he⟩ := Subgroup.mem_map.mp ξ.property
   exact he ▸ (sIdeleNorm_spec F S).2 hγ
 
-private theorem sLocalTrace_integral_dilate_unit (ξ : Hₛ) (g : Aₛ → ℂ) :
-    (∫ y, g (ξ.val.val * y) ∂νₛ) = ∫ y, g y ∂νₛ := by
+/-- Inverse dilation by an S-idele introduces its modulus in the additive integral. -/
+private theorem sLocalTrace_integral_inv_dilate (u : Iₛ) (g : Aₛ → ℂ) :
+    (∫ y, g ((u⁻¹).val * y) ∂νₛ) = (normS(u) : ℂ) * ∫ y, g y ∂νₛ := by
   let : BorelSpace Aₛ := sAdeleRing_borelSpace
   let : BorelSpace Iₛ := sIdeleGroup_borelSpace
   let : (μₛ).IsHaarMeasure := sMultiplicativeTamagawaMeasure_isHaarMeasure
@@ -3926,9 +3927,21 @@ private theorem sLocalTrace_integral_dilate_unit (ξ : Hₛ) (g : Aₛ → ℂ) 
     refine Complex.ofReal_ne_zero.mpr (Finset.prod_ne_zero_iff.mpr fun v _ ↦ ?_)
     have hv : (1 : ℝ) < v.asIdeal.absNorm := by exact_mod_cast HeightOneSpectrum.one_lt_absNorm v
     exact div_ne_zero (by linarith) (sub_pos.mpr hv).ne'
+  have hpt (t : Iₛ) : (normS(u * t) : ℂ) * g ((u⁻¹).val * (u * t).val) =
+      (normS(u) : ℂ) * ((normS(t) : ℂ) * g t.val) := by
+    have hn : normS(u * t) = normS(u) * normS(t) := by simp [map_mul]
+    rw [hn, Units.val_mul, Units.inv_mul_cancel_left, Complex.ofReal_mul, mul_assoc]
+  have h := key (fun y ↦ g ((u⁻¹).val * y))
+  rw [← integral_mul_left_eq_self _ u] at h
+  simp only [hpt, integral_const_mul] at h
+  rw [key] at h
   apply mul_left_cancel₀ hc
-  rw [← key, ← key, ← integral_mul_left_eq_self (fun t : Iₛ ↦ (normS(t) : ℂ) * g t.val) ξ.val]
-  simp only [map_mul, sLocalTrace_unit_norm, one_mul, Units.val_mul]
+  rw [← h]
+  ring
+
+private theorem sLocalTrace_integral_dilate_unit (ξ : Hₛ) (g : Aₛ → ℂ) :
+    (∫ y, g (ξ.val.val * y) ∂νₛ) = ∫ y, g y ∂νₛ := by
+  simpa [sLocalTrace_unit_norm] using sLocalTrace_integral_inv_dilate ξ.val⁻¹ g
 
 private theorem sLocalTrace_eta_affine (f : BruhatCompactSupport Iₛ) (ξ : Hₛ) (z : Aₛ) :
     sLocalTraceEta f ξ (ξ.val.val * (1 + z) - 1) = sLocalTraceEta f 1 z := by
@@ -4773,5 +4786,390 @@ theorem sLocalTrace_asymptotic_of_sharp_comparison
     (M (p.1 * p.2) - (volume₁ : ℂ) * φ.val 1 * (Real.log (p.1 * p.2) : ℂ))) / _ = _
   field_simp
   ring
+
+section PolarMoments
+
+attribute [local instance] instInfiniteCompletionMeasurableSpaceSec4 instFiniteCompletionMeasurableSec4b
+
+/-- Paper: (12.4.1.7), p. 516. Integrating the local dilation kernel against additive
+Tamagawa measure multiplies the integral of the test by the positive half-Mellin moment
+of the lift. Together with evaluation at zero, this identifies the two local polar
+functionals before the cutoff and passage to the quotient. -/
+theorem integral_sLocalTraceDilationKernel (f : BruhatCompactSupport Iₛ) (b : Aₛ → ℂ)
+    (hb : Continuous b) (hbi : Integrable b νₛ) :
+    Integrable (sLocalTraceDilationKernel f b) νₛ ∧
+    ∫ x, sLocalTraceDilationKernel f b x ∂νₛ =
+      (∫ g : Iₛ, f.val g * (Real.sqrt (normS(g)) : ℂ) ∂μₛ) * ∫ x, b x ∂νₛ := by
+  let : BorelSpace Aₛ := sAdeleRing_borelSpace
+  let : BorelSpace Iₛ := sIdeleGroup_borelSpace
+  let (v : S) : ProperSpace (v.val.adicCompletion F) := properSpace_adicCompletion v.val
+  let (w : InfinitePlace F) : SecondCountableTopology w.Completion :=
+    (InfinitePlace.Completion.isometry_extensionEmbedding w).isEmbedding.secondCountableTopology
+  let : SecondCountableTopology Aₛ := inferInstanceAs (SecondCountableTopology
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : SecondCountableTopology Iₛ := (sIdeleGroup_description F S).1.secondCountableTopology
+  let : (νₛ).IsAddHaarMeasure := sLocalTrace_additiveHaar
+  let : (μₛ).IsHaarMeasure := sMultiplicativeTamagawaMeasure_isHaarMeasure
+  let W (g : Iₛ) := f.val g / (Real.sqrt (normS(g)) : ℂ)
+  have hn : Continuous fun g : Iₛ ↦ normS(g) :=
+    NNReal.continuous_coe.comp (Units.continuous_val.comp sLocalTrace_sIdeleNorm_continuous)
+  have hp (g : Iₛ) : 0 < normS(g) := NNReal.coe_pos.mpr (Units.zero_lt (sIdeleNorm F S g))
+  have hne (g : Iₛ) : (Real.sqrt (normS(g)) : ℂ) ≠ 0 :=
+    Complex.ofReal_ne_zero.mpr (Real.sqrt_pos.mpr (hp g)).ne'
+  have hf : Continuous f.val := sLocalTraceDilationKernel_apply_zero_continuous
+    ((mem_bruhatSmoothSubmodule_iff _).1 f.property.1)
+  have hW : Continuous W := hf.div (Complex.continuous_ofReal.comp hn.sqrt) hne
+  let H (p : Aₛ × Iₛ) := W p.2 * b ((p.2⁻¹).val * p.1)
+  have hH : Continuous H := (hW.comp continuous_snd).mul
+    (hb.comp (((Units.continuous_val.comp continuous_inv).comp continuous_snd).mul continuous_fst))
+  have hnorm (g : Iₛ) : (∫ y, ‖b ((g⁻¹).val * y)‖ ∂νₛ) = normS(g) * ∫ y, ‖b y‖ ∂νₛ := by
+    have h := sLocalTrace_integral_inv_dilate g (fun y ↦ (‖b y‖ : ℂ))
+    simp only [integral_complex_ofReal, ← Complex.ofReal_mul] at h
+    exact Complex.ofReal_injective h
+  have hprod : Integrable H ((νₛ).prod μₛ) := by
+    refine (integrable_prod_iff' hH.aestronglyMeasurable).2 ⟨ae_of_all _ fun g ↦ ?_, ?_⟩
+    · have htrans : Integrable (fun y ↦ b ((g⁻¹).val * y)) νₛ := by
+        simpa only [one_mul] using sLocalTrace_integrable_symbol_dilate b hbi g⁻¹
+          (fun _ ↦ (1 : ℂ)) measurable_const 1 (fun _ ↦ norm_one.le)
+      exact htrans.const_mul (W g)
+    · let M (g : Iₛ) := (‖W g‖ * normS(g)) * ∫ y, ‖b y‖ ∂νₛ
+      have hM : HasCompactSupport M := HasCompactSupport.mono f.property.2 fun g hg h0 ↦
+        hg (by simp [M, W, h0])
+      have hMi : Integrable M μₛ :=
+        ((hW.norm.mul hn).mul continuous_const).integrable_of_hasCompactSupport hM
+      refine hMi.congr (ae_of_all _ fun g ↦ ?_)
+      dsimp only [M, H]
+      simp_rw [norm_mul]
+      rw [integral_const_mul, hnorm, mul_assoc]
+  have hw (g : Iₛ) : W g * (normS(g) : ℂ) = f.val g * (Real.sqrt (normS(g)) : ℂ) := by
+    have hs : (Real.sqrt (normS(g)) : ℂ) ^ 2 = (normS(g) : ℂ) := by
+      exact_mod_cast Real.sq_sqrt (hp g).le
+    dsimp only [W]
+    rw [← hs]
+    field_simp [hne g]
+  refine ⟨hprod.integral_prod_left, ?_⟩
+  change (∫ x, ∫ g, H (x, g) ∂μₛ ∂νₛ) = _
+  rw [integral_integral_swap (f := fun x g ↦ H (x, g)) hprod]
+  simp only [H, integral_const_mul, sLocalTrace_integral_inv_dilate, ← mul_assoc, hw,
+    integral_mul_const]
+
+/-- Paper: (12.4.1.4), p. 515. A continuous weight on the
+S-idele quotient pairs with the periodized lift by integrating upstairs. In
+particular both half-Mellin moments depend only on the periodization. -/
+private theorem sLocalTraceLift_weighted_integral
+    (f : BruhatCompactSupport Iₛ) (φJ w : Jₛ → ℂ) (hw : Continuous w)
+    (hLift : ∀ g : Iₛ, HasSum (fun ξ : Hₛ ↦ f.val (ξ.val * g)) (φJ (QuotientGroup.mk g))) :
+    Integrable (fun q ↦ φJ q * w q) μJ ∧
+      (∫ g : Iₛ, f.val g * w (QuotientGroup.mk g) ∂μₛ) = ∫ q, φJ q * w q ∂μJ := by
+  let : BorelSpace Iₛ := sIdeleGroup_borelSpace
+  let : LocallyCompactSpace Iₛ := (sIdeleGroup_description F S).2.2.1
+  let (v : S) : ProperSpace (v.val.adicCompletion F) := properSpace_adicCompletion v.val
+  let (w : InfinitePlace F) : SecondCountableTopology w.Completion :=
+    (InfinitePlace.Completion.isometry_extensionEmbedding w).isEmbedding.secondCountableTopology
+  let : SecondCountableTopology Aₛ := inferInstanceAs (SecondCountableTopology
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : SecondCountableTopology Iₛ := (sIdeleGroup_description F S).1.secondCountableTopology
+  let : (μₛ).IsHaarMeasure := sMultiplicativeTamagawaMeasure_isHaarMeasure
+  let : (μₛ).Regular := sMultiplicativeTamagawaMeasure_regular
+  let : DiscreteTopology Hₛ := discreteTopology_sProjectedDiagonal
+  let : Countable Hₛ := TopologicalSpace.separableSpace_iff_countable.mp inferInstance
+  let : (Measure.count : Measure Hₛ).IsHaarMeasure := count_isHaarMeasure_of_discreteTopology
+  let : (Measure.count : Measure Hₛ).Regular := count_regular_of_discreteTopology
+  let B (g : Iₛ) := f.val g * w (QuotientGroup.mk g)
+  have hf : Continuous f.val := sLocalTraceDilationKernel_apply_zero_continuous
+    ((mem_bruhatSmoothSubmodule_iff _).1 f.property.1)
+  have hB : Integrable B μₛ :=
+    (hf.mul (hw.comp continuous_quotient_mk')).integrable_of_hasCompactSupport
+      (HasCompactSupport.mono f.property.2 fun g hg h0 ↦ hg (by simp [h0]))
+  have hW := weilQuotientIntegral_L1 Hₛ isClosed_sProjectedDiagonal μₛ Measure.count μJ
+    sLocalQuotientTamagawaMeasure_isWeil hB
+  have he : lcaCosetIntegral Hₛ Measure.count B =ᵐ[μJ] fun q ↦ φJ q * w q := by
+    filter_upwards [hW.1] with q hi
+    have hq : (QuotientGroup.mk q.out : Jₛ) = q := QuotientGroup.out_eq' q
+    calc
+      lcaCosetIntegral Hₛ Measure.count B q = ∑' ξ : Hₛ, B (q.out * ξ.val) := by
+        simpa only [lcaCosetIntegral, count_real_singleton, one_smul] using integral_countable hi
+      _ = ∑' ξ : Hₛ, f.val (ξ.val * q.out) * w q := by
+        apply tsum_congr
+        intro ξ
+        have hclass : (QuotientGroup.mk (q.out * ξ.val) : Jₛ) = q :=
+          (QuotientGroup.mk_mul_of_mem q.out ξ.property).trans hq
+        dsimp only [B]
+        rw [hclass, mul_comm q.out]
+      _ = φJ q * w q := by simpa only [hq] using ((hLift q.out).mul_right (w q)).tsum_eq
+  exact ⟨hW.2.1.congr he, hW.2.2.trans (integral_congr_ae he)⟩
+
+/-- With trivial S-class group, every global idele class is the product of an
+outside integral unit with the insertion of a representative of its image in
+the S-idele quotient. The quotient map preserves the module. -/
+private theorem sLocalTraceLift_globalQuotient
+    (hPic : Subsingleton (CommRing.Pic ((S : Set V).integer F))) :
+    ∃ q : C𝔽 →* Jₛ, IsOpenQuotientMap q ∧
+      (∀ c, sIdeleQuotientNorm F S (q c) = ideleClassNorm F c) ∧
+      ∀ c : C𝔽, ∃ (a : outsideIntegralIdeleUnits F S) (g : Iₛ),
+        c = QuotientGroup.mk a.val * classAtS(g) ∧ q c = QuotientGroup.mk g := by
+  let := hPic
+  obtain ⟨e, he, hn⟩ := sIdeleClassGroup_equiv_of_classNumberOne F S
+  let A := integralAdelesOutside F S
+  let i := integralIdeleInsertion F S
+  let r := Units.map (adeleProjection F S).toMonoidHom
+  let j := sIdeleInsertion F S
+  let p := Units.map ((adeleProjection F S).comp A.subtype).toMonoidHom
+  let d := (Units.map (integralAdeleDiagonal F S).toMonoidHom).range
+  -- Use the coordinate projection in §3.1 so we can evaluate it on representatives.
+  let π := QuotientGroup.map d (d.map p) p (Subgroup.le_comap_map _ _)
+  have hp : IsOpenQuotientMap p := by
+    let B := (v : {v : V // v ∉ S}) → v.val.adicCompletionIntegers F
+    obtain ⟨f, hf, hf', hcoord⟩ := integralAdelesOutside_factors F S
+    let E : A ≃ₜ* (Aₛ × B) :=
+      { f.toMulEquiv with continuous_toFun := hf, continuous_invFun := hf' }
+    let U := (Units.mapContinuousMulEquiv E).trans (ContinuousMulEquiv.prodUnits _ _)
+    have hp' : (p : Aˣ → Iₛ) = Prod.fst ∘ U := funext fun u ↦
+      Units.ext (hcoord u.val).1.symm
+    rw [hp']
+    exact isOpenQuotientMap_fst.comp U.toHomeomorph.isOpenQuotientMap
+  have hπ : IsOpenQuotientMap π := by
+    have hmk : IsOpenQuotientMap (QuotientGroup.mk' d) := QuotientGroup.isOpenQuotientMap_mk
+    exact hmk.of_comp_iff.mp ((QuotientGroup.isOpenQuotientMap_mk (N := d.map p)).comp hp)
+  let q : C𝔽 →* Jₛ := π.comp e.symm.toMulEquiv.toMonoidHom
+  have he' (u : Aˣ) : e (QuotientGroup.mk u) = QuotientGroup.mk (i u) := he u
+  have hqu (u : Aˣ) : q (QuotientGroup.mk (i u)) = QuotientGroup.mk (p u) := by
+    rw [← he' u]
+    change π (e.symm (e (QuotientGroup.mk u))) = _
+    rw [e.symm_apply_apply]
+    rfl
+  have hrj (g : Iₛ) : r (j g) = g := Units.ext
+    (Prod.ext (sIdeleInsertion_apply F S g).1 (funext (sIdeleInsertion_apply F S g).2.1))
+  have hj (g : Iₛ) : j g ∈ i.range := by
+    apply (mem_range_integralIdeleInsertion F S (j g)).mpr
+    intro v hv
+    refine ⟨(sIdeleInsertion_apply F S g).2.2 v hv ▸ (v.adicCompletionIntegers F).one_mem, ?_⟩
+    have h' : (j g).inv.2 v = 1 :=
+      (congrArg (fun x : IdeleGroup (𝓞 F) F ↦ x.val.2 v) (map_inv j g).symm).trans
+        ((sIdeleInsertion_apply F S g⁻¹).2.2 v hv)
+    exact h' ▸ (v.adicCompletionIntegers F).one_mem
+  have hrep (c : C𝔽) : ∃ u : Aˣ, QuotientGroup.mk (i u) = c := by
+    obtain ⟨x, rfl⟩ := e.surjective c
+    obtain ⟨u, rfl⟩ := QuotientGroup.mk_surjective x
+    exact ⟨u, (he' u).symm⟩
+  refine ⟨q, hπ.comp e.symm.toHomeomorph.isOpenQuotientMap, ?_, ?_⟩
+  · intro c
+    obtain ⟨u, rfl⟩ := hrep c
+    rw [hqu, ← he' u, hn]
+    rfl
+  · intro c
+    obtain ⟨u, rfl⟩ := hrep c
+    let a := i u / j (p u)
+    have ha : a ∈ outsideIntegralIdeleUnits F S := by
+      refine ⟨i.range.div_mem ⟨u, rfl⟩ (hj _), ?_⟩
+      change r (i u / j (p u)) = 1
+      rw [map_div, hrj]
+      exact div_self' _
+    refine ⟨⟨a, ha⟩, p u, ?_, hqu _⟩
+    let Q := QuotientGroup.mk' (IdeleGroup.principalSubgroup (𝓞 F) F)
+    change Q (i u) = Q a * Q (j (p u))
+    rw [← map_mul, show a * j (p u) = i u from div_mul_cancel _ _]
+
+/-- Every outside-unit-invariant test descends along this global quotient with
+the prescribed value on every inserted S-idele. -/
+private theorem sLocalTraceLift_globalTestDescent
+    (φ : BruhatCompactSupport C𝔽)
+    (hOutside : ∀ (a : outsideIntegralIdeleUnits F S) (c : C𝔽),
+      φ.val (QuotientGroup.mk a.val * c) = φ.val c)
+    (q : C𝔽 →* Jₛ)
+    (hrep : ∀ c : C𝔽, ∃ (a : outsideIntegralIdeleUnits F S) (g : Iₛ),
+      c = QuotientGroup.mk a.val * classAtS(g) ∧ q c = QuotientGroup.mk g) :
+    ∃ φJ : Jₛ → ℂ, (∀ c : C𝔽, φ.val c = φJ (q c)) ∧
+      ∀ g : Iₛ, φJ (QuotientGroup.mk g) = φ.val (classAtS(g)) := by
+  let φJ (z : Jₛ) := φ.val (classAtS(z.out))
+  have hJ (g : Iₛ) : φJ (QuotientGroup.mk g) = φ.val (classAtS(g)) := by
+    let y := (QuotientGroup.mk g : Jₛ).out
+    have hy : (QuotientGroup.mk y : Jₛ) = QuotientGroup.mk g := QuotientGroup.out_eq' _
+    have hξ : y / g ∈ Hₛ := QuotientGroup.eq_iff_div_mem.mp hy
+    have h := sLocalTraceRestriction_invariant φ hOutside ⟨y / g, hξ⟩ g
+    simpa only [Subtype.coe_mk, div_mul_cancel] using h
+  refine ⟨φJ, ?_, hJ⟩
+  intro c
+  obtain ⟨a, g, hc, hq⟩ := hrep c
+  rw [hq, hJ, hc, hOutside]
+
+/-- A norm-compatible surjection pushes global class Haar measure to S-local
+quotient Haar measure with the ratio of the two norm-one masses. The norm interval from one to
+exp(1) has radial mass one and determines the Haar scalar. -/
+private theorem sLocalTrace_map_classMeasure (q : C𝔽 →ₜ* Jₛ) (hq : Surjective q)
+    (hn : ∀ x, sIdeleQuotientNorm F S (q x) = ideleClassNorm F x) :
+    (sLocalNormOneQuotientMeasure F S univ) • (ideleClassTamagawaMeasure F).map q =
+      (normOneIdeleClassTamagawaMeasure F univ) • μJ := by
+  let : BorelSpace C𝔽 := ⟨rfl⟩
+  let : BorelSpace Jₛ := ⟨rfl⟩
+  let : BorelSpace (sIdeleQuotientNorm F S).ker := ⟨rfl⟩
+  let : T2Space Jₛ := instSIdeleQuotientT2Sec1
+  let : LocallyCompactSpace Jₛ := instSIdeleQuotientLocallyCompactSec1
+  let : SecondCountableTopology Jₛ := instSIdeleQuotientSecondCountableSec1
+  let : SecondCountableTopology C𝔽 := instIdeleClassSecondCountableSec1
+  let : BorelSpace ℝ≥0ˣ := borelSpace_units_of_continuousInv₀ _
+  let : SecondCountableTopology ℝ≥0ˣ := Units.isEmbedding_val₀.secondCountableTopology
+  let : SFinite positiveRealHaar := by unfold positiveRealHaar; infer_instance
+  let μ := ideleClassTamagawaMeasure F
+  let ν := normOneIdeleClassTamagawaMeasure F
+  let η := sLocalNormOneQuotientMeasure F S
+  let n := ideleClassNorm F
+  let m := sIdeleQuotientNorm F S
+  have hc : Continuous n := (isProperMap_ideleClassNorm F).continuous
+  have hm : Continuous m := (isProperMap_sIdeleQuotientNorm F S).continuous
+  have heq : m ∘ q = n := funext hn
+  have hw := ideleClassTamagawaMeasure_isWeil F
+  have hν := (multiplicativeTamagawaMeasures_existsUnique F).exists.choose_spec.2.2.2
+  let : μ.IsHaarMeasure := hw.1
+  let : ν.IsHaarMeasure := hν.1
+  let : CompactSpace n.ker := (ideleClassGroup_finiteness F).2.1
+  let : IsFiniteMeasure ν := CompactSpace.isFiniteMeasure
+  let : (μJ).IsHaarMeasure := (sLocalQuotientTamagawaMeasure_isWeil (F := F) (S := S)).1
+  let : η.IsHaarMeasure := (sLocalNormOneQuotientMeasure_normProduct (F := F) (S := S)).1
+  let : CompactSpace m.ker := isCompact_iff_compactSpace.mp
+    ((isProperMap_sIdeleQuotientNorm F S).isCompact_preimage (isCompact_singleton (x := 1)))
+  let : IsFiniteMeasure η := CompactSpace.isFiniteMeasure
+  have hglobal : μ.map n = (ν univ) • positiveRealHaar := by
+    let σ (t : ℝ≥0ˣ) : C𝔽 := QuotientGroup.mk (canonicalIdeleNormSection F t)
+    have hσ : Continuous σ := continuous_quotient_mk'.comp (canonicalIdeleNormSection_continuous F)
+    have hr : RightInverse σ n := canonicalIdeleNormSection_rightInverse F
+    let j (p : ℝ≥0ˣ × n.ker) := σ p.1 * p.2.val
+    have hj : Measurable j :=
+      ((hσ.comp continuous_fst).mul (continuous_subtype_val.comp continuous_snd)).measurable
+    have hp : (positiveRealHaar.prod ν).map j = μ :=
+      normProduct_of_isWeil n hc σ hσ hr μ hw.2.1 ν hν.2.1
+        (normOneIdeleClassTamagawaMeasure_isWeil F)
+    have hjn : n ∘ j = Prod.fst := by
+      funext p
+      change n (σ p.1 * p.2.val) = p.1
+      rw [map_mul, hr, MonoidHom.mem_ker.mp p.2.property, mul_one]
+    rw [← hp, Measure.map_map hc.measurable hj, hjn, Measure.map_fst_prod]
+  have hlocal : (μJ).map m = (η univ) • positiveRealHaar := by
+    obtain ⟨τ, hτ⟩ := sLocalTrace_exists_normSection (F := F) (S := S)
+    let j (p : m.ker × ℝ≥0ˣ) := p.1.val * (QuotientGroup.mk (τ p.2) : Jₛ)
+    have hj : Measurable j :=
+      ((continuous_subtype_val.comp continuous_fst).mul
+        ((show Continuous (QuotientGroup.mk : Iₛ → Jₛ) from continuous_quotient_mk').comp
+          (τ.continuous.comp continuous_snd))).measurable
+    have hjm : m ∘ j = Prod.snd := by
+      funext p
+      change m (p.1.val * QuotientGroup.mk (τ p.2)) = p.2
+      rw [map_mul, MonoidHom.mem_ker.mp p.1.property, one_mul]
+      exact (sIdeleQuotientNorm_mk F S (τ p.2)).trans (hτ p.2)
+    have hp : (η.prod positiveRealHaar).map j = μJ :=
+      (sLocalNormOneQuotientMeasure_normProduct (F := F) (S := S)).2 τ hτ
+    rw [← hp, Measure.map_map hm.measurable hj, hjm, Measure.map_snd_prod]
+  have hp : IsProperMap q := isProperMap_of_comp_of_t2 q.continuous hm
+    (by rw [heq]; exact isProperMap_ideleClassNorm F)
+  let : (μ.map q).IsHaarMeasure := Measure.isHaarMeasure_map μ q.toMonoidHom q.continuous hq
+    (isProperMap_iff_tendsto_cocompact.mp hp).2
+  let k := (μ.map q).haarScalarFactor μJ
+  have hk : μ.map q = k • μJ := Measure.isMulLeftInvariant_eq_smul (μ.map q) μJ
+  have hrad := congrArg (fun m' : Measure Jₛ ↦ m'.map m) hk
+  have hqMeas : Measurable (q : C𝔽 → Jₛ) := q.continuous.measurable
+  rw [Measure.map_map hm.measurable hqMeas, heq, hglobal, Measure.map_smul k hm.measurable.aemeasurable,
+    hlocal] at hrad
+  let T : Set ℝ≥0ˣ := {t | ((t.val : ℝ≥0) : ℝ) ∈ Icc 1 (Real.exp 1)}
+  have hT : positiveRealHaar T = 1 := by
+    let t : ℝ≥0ˣ := Units.mk0 (Real.exp 1).toNNReal (by positivity)
+    have ht : ((t.val : ℝ≥0) : ℝ) = Real.exp 1 := Real.coe_toNNReal _ (Real.exp_pos 1).le
+    have h := positiveRealHaar_interval t (by rw [ht]; exact Real.one_le_exp zero_le_one)
+    rw [ht, Real.log_exp, ENNReal.ofReal_one] at h
+    exact h
+  have hmass := congrArg (fun m' : Measure ℝ≥0ˣ ↦ m' T) hrad
+  have hratio : ν univ = (k : ℝ≥0∞) * η univ := by
+    simpa only [smul_apply, ENNReal.smul_def, smul_eq_mul, hT, mul_one] using hmass
+  change (η univ) • (μ.map q) = (ν univ) • μJ
+  rw [hk, hratio, ENNReal.smul_def, smul_smul, mul_comm (η univ)]
+
+/-- Paper: (12.4.1.4), p. 515. After normalization by the respective norm-one volumes,
+the Mellin moments of a compact S-local lift agree with those of its global test.
+In particular the weights given by the square root of the norm and its reciprocal
+recover the two global polar moments used on p. 520. -/
+theorem sLocalTraceLift_global_norm_integral
+    (hPic : Subsingleton (CommRing.Pic ((S : Set V).integer F)))
+    (φ : BruhatCompactSupport C𝔽)
+    (hOutside : ∀ (a : outsideIntegralIdeleUnits F S) (c : C𝔽),
+      φ.val (QuotientGroup.mk a.val * c) = φ.val c)
+    (f : BruhatCompactSupport Iₛ)
+    (hLift : ∀ g : Iₛ, HasSum (fun ξ : Hₛ ↦ f.val (ξ.val * g)) (φ.val (classAtS(g))))
+    (w : ℝ≥0ˣ → ℂ) (hw : Continuous w) :
+    (((normOneIdeleClassTamagawaMeasure F) univ).toReal : ℂ) *
+      (∫ g : Iₛ, f.val g * w (sIdeleNorm F S g) ∂μₛ) =
+    (volume₁ : ℂ) *
+      ∫ c : C𝔽, φ.val c * w (ideleClassNorm F c) ∂(ideleClassTamagawaMeasure F) := by
+  let : BorelSpace C𝔽 := ⟨rfl⟩
+  let : BorelSpace Jₛ := ⟨rfl⟩
+  let : LocallyCompactSpace C𝔽 := instIdeleClassLocallyCompactSec1
+  obtain ⟨q, hq, hn, hrep⟩ := sLocalTraceLift_globalQuotient hPic
+  let Q : C𝔽 →ₜ* Jₛ := ⟨q, hq.continuous⟩
+  obtain ⟨φJ, hdesc, hliftJ⟩ := sLocalTraceLift_globalTestDescent φ hOutside q hrep
+  have hc : Continuous φ.val := sLocalTraceDilationKernel_apply_zero_continuous
+    ((mem_bruhatSmoothSubmodule_iff _).1 φ.property.1)
+  have hcJ : Continuous φJ :=
+    hq.isQuotientMap.continuous_iff.mpr (hc.congr fun c ↦ hdesc c)
+  let W (j : Jₛ) := w (sIdeleQuotientNorm F S j)
+  have hwJ : Continuous W := hw.comp (isProperMap_sIdeleQuotientNorm F S).continuous
+  let H (j : Jₛ) := φJ j * W j
+  have hH : Continuous H := hcJ.mul hwJ
+  have hlocal : (∫ g : Iₛ, f.val g * w (sIdeleNorm F S g) ∂μₛ) = ∫ j, H j ∂μJ := by
+    have h := (sLocalTraceLift_weighted_integral f φJ W hwJ (fun g ↦ by
+      rw [hliftJ]
+      exact hLift g)).2
+    simpa only [H, W, sIdeleQuotientNorm_mk] using h
+  have hpoint (c : C𝔽) : H (Q c) = φ.val c * w (ideleClassNorm F c) := by
+    change φJ (q c) * w (sIdeleQuotientNorm F S (q c)) = _
+    rw [← hdesc c, hn]
+  have hmap : (∫ j, H j ∂(ideleClassTamagawaMeasure F).map Q) =
+      ∫ c : C𝔽, φ.val c * w (ideleClassNorm F c) ∂(ideleClassTamagawaMeasure F) := by
+    have hQ : Measurable (Q : C𝔽 → Jₛ) := Q.continuous.measurable
+    rw [integral_map_of_stronglyMeasurable hQ hH.stronglyMeasurable]
+    exact integral_congr_ae (ae_of_all _ hpoint)
+  have h := congrArg (fun m : Measure Jₛ ↦ ∫ j, H j ∂m)
+    (sLocalTrace_map_classMeasure Q hq.surjective hn)
+  simpa only [integral_smul_measure, Complex.real_smul, hmap, ← hlocal] using h.symm
+
+/-- Paper: Theorem 12.5.1.1, pp. 519–520. The two
+half-Mellin weights of the compact S-idelic lift give the sum of the two
+global polar Fourier–Mellin terms, with the normalization of §12.4. -/
+theorem sLocalTraceLift_global_polar_sum
+    (hPic : Subsingleton (CommRing.Pic ((S : Set V).integer F)))
+    (φ : BruhatCompactSupport C𝔽)
+    (hOutside : ∀ (a : outsideIntegralIdeleUnits F S) (c : C𝔽),
+      φ.val (QuotientGroup.mk a.val * c) = φ.val c)
+    (f : BruhatCompactSupport Iₛ)
+    (hLift : ∀ g : Iₛ, HasSum (fun ξ : Hₛ ↦ f.val (ξ.val * g)) (φ.val (classAtS(g)))) :
+    let pole (s : ℂ) := modulatedFourierMellin (continuousIdeleClassNorm F) univ
+      ⟨isProperMap_ideleClassNorm F, ideleClassNorm_ne_one (F := F)⟩
+      (ideleClassTamagawaMeasure F) φ.val (ideleClassNormTwist 1 s)
+    (((normOneIdeleClassTamagawaMeasure F) univ).toReal : ℂ) *
+        ((∫ g : Iₛ, f.val g * (Real.sqrt (normS(g)) : ℂ) ∂μₛ) +
+         ∫ g : Iₛ, f.val g / (Real.sqrt (normS(g)) : ℂ) ∂μₛ) =
+      (volume₁ : ℂ) * (pole (1 / 2) + pole (-1 / 2)) := by
+  let root (t : ℝ≥0ˣ) : ℂ := (Real.sqrt (t.val : ℝ) : ℂ)
+  have hc : Continuous root :=
+    Complex.continuous_ofReal.comp (NNReal.continuous_coe.comp Units.continuous_val).sqrt
+  have hne (t : ℝ≥0ˣ) : root t ≠ 0 :=
+    Complex.ofReal_ne_zero.mpr (Real.sqrt_pos.mpr (NNReal.coe_pos.mpr (Units.zero_lt t))).ne'
+  have hs (t : ℝ≥0ˣ) : ((t.val : ℝ) : ℂ) ^ (1 / 2 : ℂ) = root t := by
+    dsimp only [root]
+    rw [Real.sqrt_eq_rpow, Complex.ofReal_cpow (NNReal.coe_nonneg t.val)]
+    norm_num
+  have hp (c : C𝔽) : ideleClassNormTwist 1 (1 / 2) c = root (ideleClassNorm F c) := by
+    change (1 : ℂ) * _ = _
+    rw [one_mul]
+    exact hs _
+  have hm (c : C𝔽) : ideleClassNormTwist 1 (-1 / 2) c = (root (ideleClassNorm F c))⁻¹ := by
+    change (1 : ℂ) * (((ideleClassNorm F c).val : ℝ) : ℂ) ^ (-1 / 2 : ℂ) = _
+    rw [one_mul, neg_div, Complex.cpow_neg, hs]
+  have hpole := sLocalTraceLift_global_norm_integral hPic φ hOutside f hLift root hc
+  have hneg := sLocalTraceLift_global_norm_integral hPic φ hOutside f hLift
+    (fun t ↦ (root t)⁻¹) (hc.inv₀ hne)
+  dsimp only
+  simp only [modulatedFourierMellin, relativeVerticalStrip, preimage_univ, indicator_univ, hp, hm,
+    mul_add]
+  simpa only [div_eq_mul_inv] using congrArg₂ (fun x y : ℂ ↦ x + y) hpole hneg
+
+end PolarMoments
 
 end RiemannMasullo
