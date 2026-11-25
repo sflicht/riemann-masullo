@@ -139,7 +139,8 @@ theorem spectralStrip_rankOne_blocks_require_polynomial_rows
       rw [Set.indicator_of_mem]
       · rw [← hη]
         rfl
-      · exact mem_univ (quasiCharacterAbscissa (m𝔽).toMonoidHom (hm𝔽).1 (hm𝔽).2 _)
+      · exact mem_univ (quasiCharacterAbscissa (m𝔽).toMonoidHom (hm𝔽).1 (hm𝔽).2
+          (ideleClassNormTwist (F := F) (χ z.val.1) (shift(z.val.2.1, z.val.2.2))))
     rw [hMeq, hnormΛ i] at key
     have hcd : finiteGramCoordinate u i S * Metric.infDist (Λ i) (Pz : Set _) ≤ 1 :=
       finiteGramCoordinate_mul_infDist_le_one (D : _ →ₗ[ℂ] _) hD Λ hj hu i S Pz
