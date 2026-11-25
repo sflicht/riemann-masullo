@@ -99,7 +99,6 @@ theorem inner_strip_jet_norm_bound :
   rw [mul_pow, Real.sq_sqrt (by positivity)]
   linarith
 
-set_option maxHeartbeats 800000 in
 /-- The normalized finite Gram coordinate is bounded by the product of the
 physical jet norm and the norm of any physical cardinal witness. -/
 theorem gram_le_jet_mul_witness (χ : PontryaginDual C₁ → PontryaginDual Cℚ)

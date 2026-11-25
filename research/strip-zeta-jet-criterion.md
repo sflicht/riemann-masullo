@@ -1,12 +1,12 @@
 # A zeta-derivative criterion for the positive-width strip trace
 
-This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. Under (1), the fork constructs [radial witnesses for ordinary zeta](StripZetaCardinal.lean) and [physical witnesses for the rational trivial character](StripRationalChart.lean). The latter pairs with every admitted ambient jet and gives a height-uniform distance bound for each chosen jet at height at least two. The [finite Gram estimate](StripGramEstimate.lean) bounds the coordinate at every ordinate, uniformly in the finite block. For this component, the [Mellin-weighted sum over all retained jets](StripRationalTrace.lean) now satisfies the uniform bound in #7455 under (1). The arithmetic lower bound in (1) remains open. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
+This is a mathematical reduction for Masullo, Theorem 10.3.2.1(1), pp. 453–455, especially (10.3.2.7). It concerns the Riemann zeta component. It uses the project's existing necessary angle estimate and sufficient coordinate estimate. Under (1), the fork constructs [radial witnesses for ordinary zeta](StripZetaCardinal.lean) and [physical witnesses for the rational trivial character](StripRationalChart.lean). The latter pairs with every admitted ambient jet and gives a height-uniform distance bound for each chosen jet at height at least two. The [finite Gram estimate](StripGramEstimate.lean) bounds the coordinate at every ordinate, uniformly in the finite block. For this component, the [Mellin-weighted finite Gram assertion for all compact Bruhat tests](StripTraceConverse.lean) is equivalent in Lean to (1). The [forward construction](StripRationalTrace.lean) handles every retained jet and every finite ambient block. The arithmetic lower bound in (1) remains open. [Issue #7241 and the component estimates](https://github.com/mccorvie/riemann-masullo/issues/7241#issuecomment-7126304685) · [Majorant in #7455](https://github.com/mccorvie/riemann-masullo/issues/7455)
 
 ## Statement
 
 Take the trivial character of the norm-one idele classes of $\mathbf Q$, choose the trivial representative, set $a=1/2$, $\alpha=1$, and fix any Sobolev exponent $s>1$. In the ordinary zeta variable $u$, the strip is $-1/2\le\Re u\le 3/2$. Every nontrivial zeta zero is in its interior, so all its jets survive. Write $m_\rho$ for the multiplicity of a distinct nontrivial zero $\rho$ and $T_\rho=2+|\Im\rho|$.
 
-For this component the following are equivalent.
+The finite Gram equivalence proved in Lean holds for every $s\ge0$ and covers every zero with $|\Im\rho|\ge1$. For the paper argument involving compact insertions below, we use $s>1$. In that setting the following are equivalent.
 
 1. For every homogeneous compact Bruhat test and every compact insertion, the complete zero-block series of #7241 is summable.
 2. For every such test, the jet-norm majorant of #7455 is summable.
@@ -95,6 +95,10 @@ $$
 $$
 At a simple zero this is the reciprocal-derivative lower bound. Together with the upper bound on every block, it pins down the worst finite-block coordinate up to a power of height. For general multiplicity, even a uniform polynomial bound for just the zeroth rows forces (1). The existing interpolation theorem then bounds all retained derivative orders. The fork now proves the quarter-circle mean and the equivalence between polynomial Gram growth and (1) in Lean. For the mean bound, transfer the logarithmic deficit over the small disk to an enclosing disk about $2+i\Im\rho$, where the Dirichlet series gives a lower bound for the anchor value. [Quarter-circle mean](StripZetaMean.lean) · [Disk-average inequality](CircleMeanTransfer.lean) Proving (1) uniformly at exceptional clusters remains open. [Coefficient converse and simple-zero two-sided estimate](StripGramConverse.lean)
 
+## From the weighted sum back to the arithmetic criterion
+
+For the necessity direction take a singleton in the outer site sum. Every row in the inner sum is nonnegative, so each individual row obeys the test bound. The rightmost point of the prescribed Mellin circle has the original ordinate and real offset shifted by the fixed radius $2e^{(4+s)/2}$. On any one compactly supported test, the resulting Mellin samples times the Gram coordinates are bounded uniformly over all pairs of a site and a finite block. The modulation argument applies Banach–Steinhaus to compactly cut off Schwartz functions. Modulating a bump by the negative ordinate keeps its Mellin sample uniformly away from zero and makes its Schwartz seminorms grow at most polynomially in the ordinate. This yields one polynomial bound over that entire family. Combining it with the coefficient converse proves the equivalence for the literal finite sum in (10.3.2.7), without assuming simplicity or a multiplicity bound. [Full equivalence](StripTraceConverse.lean) · [Modulation lemma adapted from the mlyle fork](https://github.com/mlyle/riemann-masullo/blob/5127c420c58c42dddacb86d87d941f88aea922e4/research/I314PositiveCoordinates.lean#L295)
+
 ## Uniform reduction to a shrinking disk
 
 For $L=\log(2+|\Im\rho|)\ge2$, put $r_0=L^{-2}$ and define $J_\rho(r)=\sum_{0<|\nu-\rho|<r}m_\nu\log(r/|\nu-\rho|)$. Suppose the multiplicity count of other zeros inside distance $r$ is at most $C(rL+L/\log L)$ for $r_0\le r\le1/4$. Integrating over these radii gives
@@ -182,7 +186,7 @@ From the root of the fork, build the imported project modules and check the rese
 lake build $(awk '($1 == "import" || ($1 == "public" && $2 == "import")) && $NF ~ /^(Mathlib|RiemannMasullo)[.]/ {print $NF}' research/CircleMeanTransfer.lean research/Strip*.lean | sort -u)
 research_out=.lake/build/lib/lean/research
 mkdir -p "$research_out"
-for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated StripSimpleGram StripInteriorMellin CircleMeanTransfer StripZetaMean StripGramConverse
+for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated StripSimpleGram StripInteriorMellin CircleMeanTransfer StripZetaMean StripGramConverse StripMellinPolynomial StripTraceConverse
 do
   lake env lean -DmaxSynthPendingDepth=3 -DautoImplicit=false -DrelaxedAutoImplicit=false -DwarningAsError=true -o "$research_out/$name.olean" "research/$name.lean" || exit 1
 done

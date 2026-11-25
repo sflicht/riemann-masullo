@@ -1,8 +1,7 @@
 module
 
 public import RiemannMasullo.Ch10_TraceSpectral.Sec2
-import all RiemannMasullo.Ch10_TraceSpectral.Sec2
-import all RiemannMasullo.Ch09_HardySobolev.Sec2
+import RiemannMasullo.Ch09_HardySobolev.Sec2
 
 /-! # Interior Mellin evaluations in the reciprocal strip space -/
 
@@ -34,7 +33,7 @@ theorem inner_expJet_mellin (hx : Measurable x)
     filter_upwards [(hLp v hv n).coeFn_toLp] with g hg
     rw [hg,RCLike.inner_apply']
     dsimp [expJet]; ring
-  obtain ⟨ha,_,hd⟩ := iteratedDeriv_exp_moment_of_measurable (h := fun g ↦ conj (q g)) hx
+  obtain ⟨ha,_,hd⟩ := analyticAt_laplace_integral_and_iteratedDeriv (h := fun g ↦ conj (q g)) hx
     (α := -1) (β := 1) (fun σ hσ n ↦ hm (σ : ℂ) (by simpa [abs_lt] using hσ) n) k (abs_lt.mp hw)
   refine ⟨ha, hd.trans ?_⟩
   rw [L2.inner_def]
@@ -147,47 +146,41 @@ local notation "C𝔽" => IdeleClassGroup (𝓞 F) F
 local notation "ℓ" => logIdeleClassNorm F
 local notation "ν" s => intervalSobolevMeasure (ideleClassTamagawaMeasure F) ℓ (-1) 1 s true
 
-/-- The exponential jets at every interior point belong to the physical dual
-space, including the off-spectrum points used on the Jensen contour. -/
-theorem interior_expJet_memLp {s : ℝ} (hs : 0 ≤ s) (w : ℂ) (hw : |w.re| < 1) (k : ℕ) :
-    MemLp (expJet ℓ w k) 2 (ν s) := by
-  let m := continuousIdeleClassNorm F
-  have hm : IsModulation m := ⟨isProperMap_ideleClassNorm F, ideleClassNorm_ne_one (F := F)⟩
-  let μ := canonicalModulatedHaar m hm
-  let : μ.IsHaarMeasure := (existsUnique_canonicalModulatedHaar m hm).exists.choose_spec.1
-  have hlog := sobolev_log_preserving m hm (ideleGroup_quotient.{_,0} F).2.2.2.2.2.2.2.2.2.1
-  have hint := hlog.integrable_comp_of_integrable (spectralStripJet_integrable (α := 1) (s := s)
-    (k := k) (by norm_num) hs (Or.inl (abs_lt.mp hw)))
-  have hμ : Integrable (fun g : C𝔽 ↦ Real.exp (2*w.re*ℓ g - 2*1*|ℓ g|) *
-      (ℓ g)^(2*k) * ((1+(ℓ g)^2)^(s/2))⁻¹) (ideleClassTamagawaMeasure F) := by
-    rw [Measure.isMulLeftInvariant_eq_smul (ideleClassTamagawaMeasure F) μ]
-    exact hint.smul_measure_nnreal
-  have he (g : C𝔽) : expJet ℓ w k g = spectralZeroJet (1 : PontryaginDual C𝔽) w.re w.im k g := by
-    rw [stripProfile_jet, Complex.re_add_im]; simp [expJet]
-  rw [funext he]
-  apply (memLp_two_iff_integrable_sq_norm (spectralZeroJet_continuous _ _ _ _).aestronglyMeasurable).mpr
-  apply (integrable_withDensity_iff (symmIntervalSobolevDensity_inv_continuous (by norm_num : (0:ℝ) ≤ 1) s).measurable.ennreal_ofReal
-    (.of_forall fun _ ↦ ENNReal.ofReal_lt_top)).mpr
-  refine hμ.congr (.of_forall fun g ↦ ?_)
-  dsimp only
-  rw [spectralZeroJet_norm_sq, ENNReal.toReal_ofReal (inv_nonneg.mpr (symmIntervalSobolevDensity_pos
-    (by norm_num : (0:ℝ) ≤ 1) s (ℓ g)).le), stripJet_integrand_eq (by norm_num : (0:ℝ) ≤ 1)]
-
-/-- The reciprocal strip weight is strictly positive on the idele class group. -/
-theorem reciprocal_strip_measure_ne_zero (s : ℝ) : (ν s) ≠ 0 := by
-  have hm := (symmIntervalSobolevDensity_inv_continuous (F := F) (by norm_num : (0:ℝ) ≤ 1) s).measurable.ennreal_ofReal
-  intro he
-  obtain ⟨g,hg⟩ := ((withDensity_eq_zero_iff hm.aemeasurable).mp he).exists
-  exact (ENNReal.ofReal_pos.mpr (inv_pos.mpr (symmIntervalSobolevDensity_pos
-    (by norm_num : (0:ℝ) ≤ 1) s (ℓ g)))).ne' hg
-
 /-- The ordinary rational spectral jet has precisely the Mellin normalization
 used by the reciprocal-space pairing. -/
 theorem trivial_spectralZeroJet_eq_expJet (b t : ℝ) (k : ℕ) :
     spectralZeroJet (1 : PontryaginDual C𝔽) b t k =
       expJet ℓ ((b:ℂ) + t*Complex.I) k := by
   funext g
-  rw [stripProfile_jet]
-  simp [expJet]
+  let y : ℝ := ((ideleClassNorm F g).val : ℝ)
+  have hy : 0 < y := NNReal.coe_pos.mpr (Units.zero_lt _)
+  change (1 * (y:ℂ)^((b:ℂ)+t*Complex.I)) * _ = _
+  rw [one_mul,Complex.cpow_def_of_ne_zero (Complex.ofReal_ne_zero.mpr hy.ne'),
+    ← Complex.ofReal_log hy.le]
+  rw [mul_comm (Real.log y : ℂ)]
+  rfl
+
+/-- The exponential jets at every interior point belong to the physical dual
+space, including the off-spectrum points used on the Jensen contour. -/
+theorem interior_expJet_memLp {s : ℝ} (hs : 0 ≤ s) (w : ℂ) (hw : |w.re| < 1) (k : ℕ) :
+    MemLp (expJet ℓ w k) 2 (ν s) := by
+  have h := spectralZeroJet_memLp_of_strip (1 : PontryaginDual C𝔽) (by norm_num : (0:ℝ) ≤ 1)
+    hs w.im k (Or.inl (abs_lt.mp hw))
+  rwa [trivial_spectralZeroJet_eq_expJet,Complex.re_add_im] at h
+
+/-- The reciprocal strip weight is strictly positive on the idele class group. -/
+theorem reciprocal_strip_measure_ne_zero (s : ℝ) : (ν s) ≠ 0 := by
+  have hℓ : Measurable ℓ := Real.measurable_log.comp
+    (NNReal.continuous_coe.comp (Units.continuous_val.comp (continuousIdeleClassNorm F).continuous)).measurable
+  have hd : Measurable (fun g ↦ (intervalSobolevDensity (-1) 1 s (ℓ g))⁻¹) := by
+    unfold intervalSobolevDensity
+    fun_prop
+  have hm := hd.ennreal_ofReal
+  intro he
+  obtain ⟨g,hg⟩ := ((withDensity_eq_zero_iff hm.aemeasurable).mp he).exists
+  have hp : 0 < intervalSobolevDensity (-1) 1 s (ℓ g) := by
+    unfold intervalSobolevDensity
+    exact mul_pos (lt_max_of_lt_left (Real.exp_pos _)) (Real.rpow_pos_of_pos (by positivity) _)
+  exact (ENNReal.ofReal_pos.mpr (inv_pos.mpr hp)).ne' hg
 
 end MasulloResearch.StripRadial

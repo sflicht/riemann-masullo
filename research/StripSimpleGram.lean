@@ -28,7 +28,6 @@ local notation "point(" j ")" => site(j) + 1/2
 local notation "jet(" χ ", " j ")" =>
   spectralZeroJet (χ (j).val.1) (j).val.2.1 (j).val.2.2.1 (j).val.2.2.2
 
-set_option maxHeartbeats 1000000 in
 /-- At a simple zero the removable difference quotient has value one after
 normalization. Its radial norm uses only the derivative at the selected zero. -/
 theorem simple_zeta_radial_witness :
@@ -128,7 +127,6 @@ theorem simple_zeta_radial_witness :
         (inv_ne_zero hF')), add_zero]
     exact ho.ge
 
-set_option maxHeartbeats 1000000 in
 /-- For every simple high zero, the normalized inverse Gram diagonal is bounded
 by a fixed polynomial times the reciprocal derivative at that zero. The finite
 block is any subset of the entire family, including jets at multiple zeros. -/
@@ -223,7 +221,6 @@ theorem rational_site_of_simple_zero (χ : PontryaginDual C₁ → PontryaginDua
     ∃ z : Z(χ), root(z) = ρ ∧ N(χ,s,z) = 1 :=
   rational_site_of_zero_order χ hχ1 s hρ (by decide : 0 < 1) hm
 
-set_option maxHeartbeats 1000000 in
 /-- At the simple high sites with a polynomial lower derivative bound, the
 weighted sum of §10.3.2 is bounded uniformly over all finite site selections,
 circle samples, and principal Gram blocks of the entire jet family. -/
@@ -255,7 +252,6 @@ theorem rational_convolution_simple_finiteGram_bound {b : ℝ} (hb : 0 < b) (A :
           div_le_div_of_nonneg_left (by positivity) (div_pos hb (pow_pos hT A)) hlow
        _ = (C/b)*T^(A+4) := by rw [pow_add]; field_simp
 
-set_option maxHeartbeats 1000000 in
 /-- Weight each simple-zero row by the magnitude of its ordinary derivative.
 The resulting sum is uniformly bounded at all simple zeros of height at least
 two, with no separation, density or lower derivative hypothesis. -/

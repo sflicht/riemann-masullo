@@ -119,7 +119,6 @@ private theorem rational_site_count (χ : PontryaginDual C₁ → PontryaginDual
   exact (by exact_mod_cast hh : (N(χ,s,z) : ℝ) ≤ ((order(χ 1,w z)).untop₀.toNat : ℝ)).trans_eq
     (by rw [← hd]; exact_mod_cast Int.toNat_of_nonneg (hp z).le)
 
-set_option maxHeartbeats 1600000 in
 /-- A polynomial bound on weighted coordinates at selected sites gives the
 Mellin-weighted sum over those sites, uniformly in the full ambient Gram block. -/
 theorem rational_convolution_weighted_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ s)
@@ -173,7 +172,6 @@ theorem rational_convolution_weighted_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ 
     _ ≤ _ := mul_le_mul_of_nonneg_left (hf.sum_le_tsum T fun z _ ↦ by dsimp [f]; positivity)
       (mul_nonneg hC hL)
 
-set_option maxHeartbeats 1600000 in
 /-- A polynomial coordinate bound on selected sites gives the Mellin-weighted
 sum over those sites, uniformly in the full ambient Gram block. -/
 theorem rational_convolution_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ s)
@@ -192,7 +190,6 @@ theorem rational_convolution_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ s)
   simpa only [mul_one] using rational_convolution_weighted_finiteGram_bound_on hs χ hχ1 φ P
     (fun _ ↦ 1) hC p (fun z hz m S ↦ by simpa only [mul_one] using hGram z hz m S)
 
-set_option maxHeartbeats 1600000 in
 /-- Theorem 10.3.2.1(1), pp. 453–455, rational trivial component of #7455.
 Under the first-coefficient hypothesis, one constant bounds the Mellin-weighted
 sum over every finite set of sites, every choice of points on the prescribed

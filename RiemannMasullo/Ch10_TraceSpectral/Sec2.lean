@@ -2266,6 +2266,37 @@ private theorem spectralStripJet_integrable {α s b : ℝ} (hα : 0 ≤ α) (hs 
               (inv_nonneg.mpr (Real.rpow_pos_of_pos (by positivity) _).le))
       _ = x ^ (2 * k) * ((1 + x ^ 2) ^ (s / 2))⁻¹ := one_mul _
 
+/-- A character times an exponential and a logarithmic monomial belongs to
+the reciprocal strip space throughout its interior and at exactly the
+admissible boundary orders. The sufficient condition here also applies away
+from the spectral sites. -/
+theorem spectralZeroJet_memLp_of_strip (ψ : PontryaginDual C𝔽) {α s b : ℝ}
+    (_hα : 0 ≤ α) (_hs : 0 ≤ s) (t : ℝ) (k : ℕ)
+    (hcond : (-α < b ∧ b < α) ∨ ((b = -α ∨ b = α) ∧ 2 * (k : ℝ) + 1 < s)) :
+    MemLp (spectralZeroJet ψ b t k) 2 (L2μ'(-α, α, s)) := by
+  let ν : Measure C𝔽 := canonicalModulatedHaar m𝔽 hm𝔽
+  let : ν.IsHaarMeasure := (existsUnique_canonicalModulatedHaar m𝔽 hm𝔽).exists.choose_spec.1
+  have hν : Integrable (fun g : C𝔽 ↦
+      Real.exp (2 * b * logNorm g - 2 * α * |logNorm g|) *
+        (logNorm g) ^ (2 * k) * ((1 + (logNorm g) ^ 2) ^ (s / 2))⁻¹) ν :=
+    (sobolev_log_preserving m𝔽 hm𝔽 hms𝔽).integrable_comp_of_integrable
+      (spectralStripJet_integrable _hα _hs hcond)
+  have hμ : Integrable (fun g : C𝔽 ↦
+      Real.exp (2 * b * logNorm g - 2 * α * |logNorm g|) *
+        (logNorm g) ^ (2 * k) * ((1 + (logNorm g) ^ 2) ^ (s / 2))⁻¹) μ𝔽 := by
+    rw [Measure.isMulLeftInvariant_eq_smul μ𝔽 ν]
+    exact hν.smul_measure_nnreal
+  apply (memLp_two_iff_integrable_sq_norm
+    (spectralZeroJet_continuous ψ b t k).aestronglyMeasurable).2
+  apply (integrable_withDensity_iff
+    ((symmIntervalSobolevDensity_inv_continuous _hα s).measurable.ennreal_ofReal)
+    (ae_of_all μ𝔽 fun _ ↦ ENNReal.ofReal_lt_top)).2
+  refine hμ.congr (ae_of_all μ𝔽 fun g ↦ ?_)
+  dsimp only
+  rw [spectralZeroJet_norm_sq,
+    ENNReal.toReal_ofReal (inv_nonneg.mpr (symmIntervalSobolevDensity_pos _hα s (logNorm g)).le),
+    stripJet_integrand_eq _hα]
+
 /-- Paper: Theorem 10.2.2.1, p. 446. The admitted strip jets are
 square-integrable for the reciprocal strip weight.
 Deviation: Exclude the divergent boundary endpoint of (10.2.2.5). -/
@@ -2283,28 +2314,7 @@ theorem spectralStripJet_memLp (χ : PontryaginDual C₁ → PontryaginDual C�
         ((lt_spectralBoundaryMultiplicity s _ _).mp hj).2
       linarith
     · omega
-  let ν : Measure C𝔽 := canonicalModulatedHaar m𝔽 hm𝔽
-  let : ν.IsHaarMeasure := (existsUnique_canonicalModulatedHaar m𝔽 hm𝔽).exists.choose_spec.1
-  have hν : Integrable (fun g : C𝔽 ↦
-      Real.exp (2 * j.val.2.1 * logNorm g - 2 * α * |logNorm g|) *
-        (logNorm g) ^ (2 * j.val.2.2.2) * ((1 + (logNorm g) ^ 2) ^ (s / 2))⁻¹) ν :=
-    (sobolev_log_preserving m𝔽 hm𝔽 hms𝔽).integrable_comp_of_integrable
-      (spectralStripJet_integrable _hα _hs hcond)
-  have hμ : Integrable (fun g : C𝔽 ↦
-      Real.exp (2 * j.val.2.1 * logNorm g - 2 * α * |logNorm g|) *
-        (logNorm g) ^ (2 * j.val.2.2.2) * ((1 + (logNorm g) ^ 2) ^ (s / 2))⁻¹) μ𝔽 := by
-    rw [Measure.isMulLeftInvariant_eq_smul μ𝔽 ν]
-    exact hν.smul_measure_nnreal
-  apply (memLp_two_iff_integrable_sq_norm
-    (spectralZeroJet_continuous (χ j.val.1) j.val.2.1 j.val.2.2.1 j.val.2.2.2).aestronglyMeasurable).2
-  apply (integrable_withDensity_iff
-    ((symmIntervalSobolevDensity_inv_continuous _hα s).measurable.ennreal_ofReal)
-    (ae_of_all μ𝔽 fun _ ↦ ENNReal.ofReal_lt_top)).2
-  refine hμ.congr (ae_of_all μ𝔽 fun g ↦ ?_)
-  dsimp only
-  rw [spectralZeroJet_norm_sq,
-    ENNReal.toReal_ofReal (inv_nonneg.mpr (symmIntervalSobolevDensity_pos _hα s (logNorm g)).le),
-    stripJet_integrand_eq _hα]
+  exact spectralZeroJet_memLp_of_strip (χ j.val.1) _hα _hs j.val.2.2.1 j.val.2.2.2 hcond
 
 section
 

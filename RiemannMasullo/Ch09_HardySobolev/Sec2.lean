@@ -1571,6 +1571,12 @@ private theorem iteratedDeriv_exp_moment_of_measurable {X : Type*} [MeasurableSp
     (hderiv 0 w hw).differentiableAt.differentiableWithinAt) (hS.mem_nhds hz),
     hFi k z hz, hiter k z hz⟩
 
+/-- Integrable exponential moments on a real interval give a holomorphic
+Laplace transform on its vertical strip, with all derivatives obtained under
+the integral sign. -/
+alias analyticAt_laplace_integral_and_iteratedDeriv := iteratedDeriv_exp_moment_of_measurable
+
+
 /-- Differentiation under the integral sign for exponential moments on the real line with
 Lebesgue measure. -/
 private theorem iteratedDeriv_exp_moment {h : ℝ → ℂ} {α β : ℝ}

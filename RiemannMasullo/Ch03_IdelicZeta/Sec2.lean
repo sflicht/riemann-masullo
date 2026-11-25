@@ -3889,6 +3889,14 @@ private theorem classTamagawa_map_log_norm :
     ← Measure.coe_nnreal_smul, ENNReal.coe_toNNReal (measure_ne_top ν univ)]
   exact hl.aemeasurable
 
+/-- Under the logarithm of the idèle class norm, Tamagawa measure pushes forward
+to Lebesgue measure times the mass of the norm-one class group. -/
+theorem ideleClassTamagawaMeasure_map_logNorm :
+    (ideleClassTamagawaMeasure F).map (fun g ↦ Real.log (classNormℝ g)) =
+      (normOneIdeleClassTamagawaMeasure F univ).toNNReal • volume :=
+  classTamagawa_map_log_norm
+
+
 /-- Paper: Theorem 3.2.2.1(1)(a), p. 124. The residue at the trivial character
 is minus the norm-one class volume times the test function evaluated at zero. -/
 theorem globalIdelicZFunction_residue_zero (f : ℬ[F]) :
