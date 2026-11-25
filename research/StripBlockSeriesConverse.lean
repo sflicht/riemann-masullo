@@ -166,4 +166,43 @@ theorem spectralStrip_rankOne_blocks_require_polynomial_rows
     hb' hw (fun φ _ ↦ htest φ)
   exact ⟨C, hC, n, fun i S hη hk hadm ↦ hbound ⟨(i, S), hη, hk, hadm⟩⟩
 
+/-- The assertion of the recorded gap
+`spectralStripConvolution_traceCauchy_compact_block_series` of `Ch10_TraceSpectral/Sec3`
+(#7241) for one test: for every Markushevich basis realizing the strip jets and every
+compact insertion, the zero-block traces are summable. -/
+def CompactBlockSeries (χ : PontryaginDual C₁ → PontryaginDual C𝔽)
+    (φ : BruhatCompactSupport C𝔽) : Prop :=
+  ∀ (x : J(χ) → Q(a, hStrip(hα), hs₀(hs)))
+    (Λ : J(χ) → StrongDual ℂ Q(a, hStrip(hα), hs₀(hs))),
+    IsSpectralMarkushevichBasis x Λ →
+    (∀ j, D (Λ j) = (spectralStripJet_memLp χ hα hs₀(hs) j).toLp (raw(χ, j))) →
+    ∀ U : compactOperator (RingHom.id ℂ) Q(a, hStrip(hα), hs₀(hs)) Q(a, hStrip(hα), hs₀(hs)),
+      Summable (fun z : Z(χ, α) ↦ ∑ m : Fin (N(χ, α, s, z)), Λ (jet(z, m))
+        (spectralConvolution (F := F) a (hStrip(hα)) hs₀(hs) φ (U.val (x (jet(z, m))))))
+
+/-- **Rows forced by the recorded gap.** If the assertion of #7241 holds for
+every compact Bruhat test, then for each norm-one character one polynomial in
+the ordinate bounds every zeroth row of that character over all finite blocks
+with no second row at its site. Only rank-one insertions and one basis are used. -/
+theorem spectralStrip_compact_blocks_require_polynomial_rows
+    (χ : PontryaginDual C₁ → PontryaginDual C𝔽) (hχ : IsSpectralBasepointChoice χ)
+    (η : PontryaginDual C₁)
+    (h : ∀ φ : BruhatCompactSupport C𝔽, CompactBlockSeries a hα hs χ φ) :
+    let u (j : J(χ)) := (spectralStripJet_memLp χ hα hs₀(hs) j).toLp (raw(χ, j))
+    ∃ C ≥ (0 : ℝ), ∃ n : ℕ, ∀ (i : J(χ)) (S : Finset (J(χ))), i.val.1 = η → i.val.2.2.2 = 0 →
+      (∀ j ∈ S, j ≠ i →
+        (j.val.1, j.val.2.1, j.val.2.2.1) ≠ (i.val.1, i.val.2.1, i.val.2.2.1)) →
+      ‖u i‖ * finiteGramCoordinate u i S ≤ C * (1 + |i.val.2.2.1|) ^ n := by
+  have hrank (v : Q(a, hStrip(hα), hs₀(hs))) (f : StrongDual ℂ Q(a, hStrip(hα), hs₀(hs))) :
+      IsCompactOperator (f.smulRight v) := by
+    have he : f.smulRight v = (ContinuousLinearMap.toSpanSingleton ℂ v).comp f := by
+      ext u
+      simp
+    rw [he]
+    exact (isCompactOperator_of_locallyCompactSpace_dom f).clm_comp
+      (ContinuousLinearMap.toSpanSingleton ℂ v)
+  obtain ⟨-, x, Λ, hb, hj⟩ := spectralStripMarkushevichBasis χ hχ (a := a) hα hs₀(hs)
+  exact spectralStrip_rankOne_blocks_require_polynomial_rows a hα hs χ hχ η x Λ hb hj
+    (fun φ v f ↦ h φ x Λ hb hj ⟨f.smulRight v, hrank v f⟩)
+
 end MasulloResearch.StripBlocks
