@@ -311,6 +311,38 @@ private theorem tail_of_exterior {H : ℂ → ℂ} (hc : ContinuousOn H (Complex
         mul_le_mul (hout σ hσ y hz) hscale (sq_nonneg _) (by positivity)
       _ = _ := by field_simp
 
+/-- Realize a translated holomorphic interpolant from its exterior envelope.
+The transform agrees locally with the interpolant at every interior point. -/
+theorem exists_sobolev_translated {H : ℂ → ℂ} {D : Set ℂ} (hH : AnalyticOnNhd ℂ H D)
+    (a : ℂ) (ha : |a.re| ≤ 1/2) (hstrip : ∀ z : ℂ, z.re ∈ J → z-a ∈ D)
+    {K : ℝ} (hK : 0 ≤ K)
+    (hout : ∀ σ ∈ J, ∀ y : ℝ, 1 ≤ ‖line σ y - a‖ →
+      ‖H (line σ y - a)‖ ≤ K * (1 + (y - a.im)^2)⁻¹) (s : ℝ) :
+    ∃ (p : ℝ → ℂ) (h : MemLp p 2 (radialMeasure s)), Continuous p ∧
+      ‖h.toLp p‖^2 ≤ (K / 2)^2 * ∫ x, sobolevKernel s x ∧
+      (∀ z : ℂ, |z.re| < 3/2 → MellinConvergent (fun t ↦ p (Real.log t)) z) ∧
+      ∀ v : ℂ, |(v+a).re| < 3/2 →
+        (fun w : ℂ ↦ ∫ x : ℝ, Complex.exp ((w+a)*x) * p x) =ᶠ[𝓝 v] H := by
+  let G := fun z ↦ H (z - a)
+  have hG : DifferentiableOn ℂ G (Complex.re ⁻¹' J) :=
+    hH.differentiableOn.comp (differentiable_id.sub_const a).differentiableOn hstrip
+  have hedge (σ : ℝ) (hσ : σ = -(3 / 2) ∨ σ = 3 / 2) (y : ℝ) :
+      ‖G (line σ y)‖ ≤ K * (1 + (y - a.im) ^ 2)⁻¹ := by
+    have hj : σ ∈ J := by rcases hσ with rfl | rfl <;> constructor <;> norm_num
+    apply hout σ hj y
+    apply le_trans _ (Complex.abs_re_le_norm _)
+    simp only [Complex.sub_re, Complex.add_re, Complex.ofReal_re, Complex.mul_I_re,
+      Complex.ofReal_im, neg_zero, add_zero]
+    rcases hσ with rfl | rfl
+    · exact (neg_le_abs _).trans' (by linarith [(abs_le.mp ha).1])
+    · exact (le_abs_self _).trans' (by linarith [(abs_le.mp ha).2])
+  obtain ⟨p, h, hp, hnorm, hrec⟩ := exists_sobolev_representative hG
+    (tail_of_exterior hG.continuousOn a hK hout) hK hedge s
+  refine ⟨p, h, hp, hnorm, fun z hz ↦ (hrec z hz).1, fun v hv ↦ ?_⟩
+  have hopen : IsOpen {w : ℂ | |(w+a).re| < 3/2} := isOpen_lt (by fun_prop) continuous_const
+  filter_upwards [hopen.mem_nhds hv] with w hw
+  simpa only [G, add_sub_cancel_right] using (hrec (w+a) hw).2
+
 /-- Construct a weighted radial representative for a specified derivative at `a`
 from the divisor in local coordinates. All other interior zero orders are
 preserved. The norm bound retains the full inverse factorial. -/
@@ -335,36 +367,18 @@ theorem exists_sobolev_cardinal_jet {F : ℂ → ℂ} {D : Set ℂ} (hF : Analyt
   intro K
   obtain ⟨H, hH, hjet, hother, hext⟩ :=
     StripJets.exists_cardinal_interpolant hF hdisk hk hm hr hr2 hiso hU hU0
-  let G := fun z ↦ H (z - a)
-  have hG : DifferentiableOn ℂ G (Complex.re ⁻¹' J) :=
-    hH.differentiableOn.comp (differentiable_id.sub_const a).differentiableOn hstrip
   have hK : 0 ≤ K := by dsimp [K]; positivity
   have hGbound (σ : ℝ) (hσ : σ ∈ J) (y : ℝ) (hv : 1 ≤ ‖line σ y - a‖) :
-      ‖G (line σ y)‖ ≤ K * (1 + (y - a.im) ^ 2)⁻¹ := by
+      ‖H (line σ y - a)‖ ≤ K * (1 + (y - a.im) ^ 2)⁻¹ := by
     apply (hext _ (hstrip _ (by simpa using hσ)) hv).trans
     dsimp [K]
     calc
       _ ≤ (m - k : ℕ) * (U ^ 2 / ‖iteratedDeriv m F 0 / (m.factorial : ℂ)‖ ^ 3 / r ^ m) *
           (C * (1 + (y - a.im) ^ 2)⁻¹) / (k.factorial : ℝ) := by gcongr; exact hdiv σ hσ y hv
       _ = _ := by ring
-  have hedge (σ : ℝ) (hσ : σ = -(3 / 2) ∨ σ = 3 / 2) (y : ℝ) :
-      ‖G (line σ y)‖ ≤ K * (1 + (y - a.im) ^ 2)⁻¹ := by
-    have hj : σ ∈ J := by rcases hσ with rfl | rfl <;> constructor <;> norm_num
-    apply hGbound σ hj y
-    apply le_trans _ (Complex.abs_re_le_norm _)
-    simp only [Complex.sub_re, Complex.add_re, Complex.ofReal_re, Complex.mul_I_re,
-      Complex.ofReal_im, neg_zero, add_zero]
-    rcases hσ with rfl | rfl
-    · exact (neg_le_abs _).trans' (by linarith [(abs_le.mp ha).1])
-    · exact (le_abs_self _).trans' (by linarith [(abs_le.mp ha).2])
-  obtain ⟨p, h, hp, hnorm, hrec⟩ := exists_sobolev_representative hG
-    (tail_of_exterior hG.continuousOn a hK hGbound) hK hedge s
-  refine ⟨p, h, hp, hnorm, fun z hz ↦ (hrec z hz).1, ?_⟩
-  let M := fun v : ℂ ↦ ∫ x : ℝ, Complex.exp ((v + a) * x) * p x
-  have hlocal (v : ℂ) (hv : |(v + a).re| < 3 / 2) : M =ᶠ[𝓝 v] H := by
-    have hopen : IsOpen {w : ℂ | |(w + a).re| < 3 / 2} := isOpen_lt (by fun_prop) continuous_const
-    filter_upwards [hopen.mem_nhds hv] with w hw
-    simpa only [M, G, add_sub_cancel_right] using (hrec (w + a) hw).2
+  obtain ⟨p, h, hp, hnorm, hconv, hlocal⟩ :=
+    exists_sobolev_translated hH a ha hstrip hK hGbound s
+  refine ⟨p, h, hp, hnorm, hconv, ?_⟩
   have hzero := hlocal 0 (by simpa using ha.trans_lt (by norm_num : (1 / 2 : ℝ) < 3 / 2))
   refine ⟨fun j hj ↦ (hzero.iteratedDeriv_eq j).trans (hjet j hj), ?_⟩
   intro v hv hne

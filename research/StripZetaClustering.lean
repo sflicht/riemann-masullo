@@ -180,7 +180,8 @@ private theorem trailingCoeff_eq_taylorCoeff {f : ℂ → ℂ} {w : ℂ}
     simp [hpow, hj]
   · simp
 
-private theorem zetaOrder_finite {z : ℂ} (hz : z ≠ 1) : analyticOrderAt riemannZeta z ≠ ⊤ := by
+/-- Away from its pole, ordinary zeta has finite analytic order. -/
+theorem zetaOrder_finite {z : ℂ} (hz : z ≠ 1) : analyticOrderAt riemannZeta z ≠ ⊤ := by
   apply analyticOn_riemannZeta.analyticOrderAt_ne_top_of_isPreconnected (x := 2)
     (isConnected_compl_singleton_of_one_lt_rank (by simp) 1).isPreconnected (by simp) hz
   rw [(analyticOn_riemannZeta 2 (by norm_num)).analyticOrderAt_eq_zero.mpr
@@ -358,7 +359,7 @@ theorem zetaCoeff_lower_at_separated_zero {w : ℂ} (hw : 1 ≤ |w.im|)
 
 /-- Extend a uniform high-zero bound down to height one by finite compactness.
 This is the coefficient hypothesis of `rational_convolution_finiteGram_bound`. -/
-private theorem extend_high_zetaCoeff_bound {H : ℝ} (A : ℕ)
+theorem extend_high_zetaCoeff_bound {H : ℝ} (A : ℕ)
     (hhigh : ∀ w : ℂ, H ≤ |w.im| → riemannZeta w = 0 → ∀ n : ℕ,
       analyticOrderAt riemannZeta w = n → 1/(2+|w.im|)^A ≤ ‖taylorCoeff riemannZeta w n‖) :
     ∃ b : ℝ, 0 < b ∧ ∀ w : ℂ, 1 ≤ |w.im| → riemannZeta w = 0 → ∀ n : ℕ,

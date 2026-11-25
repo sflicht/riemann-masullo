@@ -96,7 +96,7 @@ give it back.
 
 **Searching for repairs of the final gaps in the proof.** As of 24 November 2026, about 13,200
 theorems and 1,800 definitions are stated in Lean. In the chapters the trace formula rests on
-(Chapters 2–7 and 9–13, with Appendices A–D) all but thirteen of the theorems are proved. About ninety people have
+(Chapters 2–7 and 9–13, with Appendices A–D) all but fifteen of the theorems are proved. About ninety people have
 had pull requests merged, some 2,660 pull requests in all.
 
 - **Those chapters are stated, and what could be proved is proved.** Where a
@@ -107,18 +107,18 @@ had pull requests merged, some 2,660 pull requests in all.
   that are derived from it, use exactly one statement that has no proof: the cancellation of
   the zeros outside the strip in Theorem 12.5.1.1. It is proved in Lean that this cancellation,
   for every width, is equivalent to the main claim, so nothing weaker can supply it.
-- **Eight more open statements, off the main line.** Each is a named Lean statement, neither
-  proved nor refuted, and the Lean proof of the targets uses none of them. Four, under the
+- **Nine more open statements, off the main line.** Each is a named Lean statement, neither
+  proved nor refuted, and the Lean proof of the targets uses none of them. Five, under the
   bases and traces of Chapters 7 and 10, are statements from which other theorems of the paper
   are proved. Four, under §10.3, §10.4 and (12.5.1.4), are used by nothing else in Lean and are
   not known to hold; they are kept in files that nothing imports.
 - **Five proof steps that the manuscript does not state precisely enough to formalize,** in
   Chapters 7, 11 and 12. They have no Lean statement.
-- **Four classical inputs:** theorems of the literature that are stated in Lean and used, and
+- **Five classical inputs:** theorems of the literature that are stated in Lean and used, and
   not proved there. The targets do not use them either.
-- **288 statements of the manuscript are proved false as printed.** Each is kept in Lean with
+- **290 statements of the manuscript are proved false as printed.** Each is kept in Lean with
   a machine-checked proof of its negation, next to the corrected statement, which is proved.
-  Eight more such proofs rest on a statement that is itself still open.
+  Six more such proofs rest on a statement that is itself still open.
 - The supplementary material (Chapters 8 and 14, Appendix E, §A.4, §B.7), on which the trace
   formula does not rest, is partly stated and proved, and is not being worked on.
 

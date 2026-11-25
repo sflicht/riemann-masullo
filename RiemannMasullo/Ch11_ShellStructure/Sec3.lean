@@ -970,33 +970,83 @@ def divisorialThetaRepresentative (ω : PontryaginDual C₁) (T : Finset V) :
     P →ₗ[ℂ] Θ(ω) :=
   ((homogeneousAdelicThetaLinearMap F ω).domRestrict P).ker.mkQ.comp polarPV(T)
 
-/-- On the homogeneous polar-free tests one can cancel the same principal values
-from both sides. The isotypic average intertwines them with the injective
-operator on ordinary smooth theta classes. -/
+section PositiveTwistCancellation
+
+local notation "average(" twist ", " hs ", " ω ")" =>
+  (existsUnique_globalThetaSobolevAverage (F := F) (a := twist) (le_refl (0 : ℝ)) hs ω).exists.choose
+local notation "endpointImage(" twist ", " hs ", " ω ", " f ")" =>
+  (average(twist, hs, ω) ((globalThetaSobolevInclusion F twist (le_refl (0 : ℝ)) hs)
+    (Submodule.Quotient.mk (f : P)))).val
+
+private theorem primaryDivisorialThetaClass_average_commutes {G X : Type*} [Monoid G]
+    [TopologicalSpace G] [MeasurableSpace G] [NormedAddCommGroup X] [NormedSpace ℂ X]
+    (μ : Measure G) (ω : PontryaginDual G) (ρ : G →* (X →L[ℂ] X))
+    (A M : X →L[ℂ] X) (hA : IsPettisIsotypicAverageOn μ univ ρ ω A)
+    (hM : ∀ k v, M (ρ k v) = ρ k (M v)) (x : X) : M (A x) = A (M x) := by
+  apply (SeparatingDual.eq_iff_forall_dual_eq (R := ℂ)).2
+  intro T
+  have h₁ := LinearMap.congr_fun (hA (M x)).2 T
+  have h₂ := LinearMap.congr_fun (hA x).2 (T.comp M)
+  exact (h₁.trans ((integral_congr_ae (.of_forall fun k ↦ congrArg T
+    ((congrArg (star (ω k : ℂ) • ·) (hM k x).symm).trans (M.map_smul _ _).symm))).trans h₂.symm)).symm
+
+/-- Paper: (11.2.0.7), p. 486. On the norm-one isotype, applying the completed
+principal value to a test image gives the image of the principal-value test. -/
+theorem globalThetaSobolevPrincipalValue_homogeneous_apply (T : Finset V) (b : ℝ) {s : ℝ} (hs : 0 ≤ s)
+    (ω : PontryaginDual C₁) (f : P) :
+    let M := globalThetaSobolevPrincipalValue F T b hs
+    M (endpointImage(b, hs, ω, f)) = endpointImage(b, hs, ω, polarPV(T) f) := by
+  intro M
+  let hJ := le_refl (0 : ℝ)
+  have hc := primaryDivisorialThetaClass_average_commutes (normOneIdeleClassTamagawaMeasure F) ω
+    ((exists_globalThetaSobolevAction (F := F) b hJ hs).choose.comp (ideleClassNorm F).ker.subtype)
+    _ M (existsUnique_globalThetaSobolevAverage (F := F) (a := b) hJ hs ω).exists.choose_spec.1
+    (globalThetaSobolevPrincipalValue_equivariant T b hs) ((globalThetaSobolevInclusion F b hJ hs) (Submodule.Quotient.mk f))
+  exact hc.trans (congrArg (fun v ↦ (average(b, hs, ω) v).val)
+    (globalThetaSobolevPrincipalValue_apply T b hs f))
+
+private theorem primaryDivisorialThetaClass_cancel_of_embedding {D Q H A : Type*} (q : D → Q) (v : D → H)
+    (t : D → A) (i : A → H) (Dmap : D → D) (M : H → H)
+    (hi : Injective i) (hM : Injective M)
+    (hq : ∀ x y, q x = q y ↔ t x = t y)
+    (hv : ∀ x, i (t x) = v x) (hp : ∀ x, M (v x) = v (Dmap x)) (x y : D) :
+    q (Dmap x) = q (Dmap y) ↔ q x = q y := by
+  have he (a b : D) : q a = q b ↔ v a = v b := by
+    rw [← hv, ← hv, hi.eq_iff, hq]
+  rw [he, he, ← hp, ← hp, hM.eq_iff]
+
+/-- On homogeneous polar-free tests, cancellation follows by embedding in the
+completion with positive twist, where the completed principal value is bijective. -/
 private theorem primaryDivisorialThetaClass_cancel (ω : PontryaginDual C₁) (T : Finset V)
     (f g : P) :
     (Submodule.Quotient.mk (polarPV(T) f) : Θ(ω)) =
       Submodule.Quotient.mk (polarPV(T) g) ↔
     (Submodule.Quotient.mk f : Θ(ω)) = Submodule.Quotient.mk g := by
-  rcases T.eq_empty_or_nonempty with rfl | hn
-  · have hid (x : P) : polarPV(∅) x = x :=
-      Subtype.ext (LinearMap.congr_fun divisorialThetaStage_empty_PV x.val)
-    rw [hid, hid]
-  obtain ⟨e, he⟩ := (globalThetaIsotypicAverage_equiv (F := F) ω).2
-  let avg := (existsUnique_globalThetaIsotypicAverage (F := F) ω).exists.choose
-  let q := (adelicThetaLinearMap F).ker.mkQ
-  have h (x y : P) : (Submodule.Quotient.mk x : Θ(ω)) = Submodule.Quotient.mk y ↔
-      avg (q x.val) = avg (q y.val) := by
-    rw [← he x.val, ← he y.val, Subtype.coe_inj, e.injective.eq_iff]
-    simp only [Submodule.mkQ_apply, Submodule.Quotient.eq, LinearMap.mem_ker,
-      LinearMap.domRestrict_apply, Submodule.coe_sub]
-  rw [h, h]
-  change avg (q (adelePrincipalValue F T f.val)) = avg (q (adelePrincipalValue F T g.val)) ↔ _
-  have hcomm (x : P) : avg (q (adelePrincipalValue F T x.val)) =
-      globalThetaPrincipalValue F T (avg (q x.val)) :=
-    (globalThetaPrincipalValue_isotypicAverage T ω (q x.val)).symm
-  rw [hcomm, hcomm]
-  exact (globalThetaPrincipalValue_isClosedEmbedding hn).injective.eq_iff
+  let hJ := le_refl (0 : ℝ)
+  let t (x : P) : globalPolarFreeThetaSubmodule (F := F) ω :=
+    ⟨Submodule.Quotient.mk x.val, Submodule.mem_map.mpr ⟨x.val, x.property, rfl⟩⟩
+  let inc := (exists_globalHomogeneousThetaSobolevInclusion (F := F) (a := 1) hJ hJ ω).choose
+  let v (x : P) := endpointImage(1, hJ, ω, x)
+  have hv (x : P) : (inc (t x)).val = v x :=
+    congrArg Subtype.val ((exists_globalHomogeneousThetaSobolevInclusion (F := F)
+      (a := 1) hJ hJ ω).choose_spec.2.2 x (t x) rfl).1
+  have hq (x y : P) : (Submodule.Quotient.mk x : Θ(ω)) = Submodule.Quotient.mk y ↔
+      t x = t y := by
+    rw [Subtype.ext_iff]
+    change _ ↔ (Submodule.Quotient.mk x.val : GlobalHomogeneousThetaSpace F ω) =
+      Submodule.Quotient.mk y.val
+    simp only [Submodule.Quotient.eq, LinearMap.mem_ker, LinearMap.domRestrict_apply,
+      Submodule.coe_sub]
+  let M := globalThetaSobolevPrincipalValue F T 1 hJ
+  have hp (x : P) : M (v x) = v (polarPV(T) x) :=
+    globalThetaSobolevPrincipalValue_homogeneous_apply T 1 hJ ω x
+  exact primaryDivisorialThetaClass_cancel_of_embedding (fun x : P ↦ (Submodule.Quotient.mk x : Θ(ω))) v t
+    (fun z ↦ (inc z).val) (polarPV(T)) M
+    (Subtype.val_injective.comp (exists_globalHomogeneousThetaSobolevInclusion (F := F)
+      (a := 1) hJ hJ ω).choose_spec.1)
+    (globalThetaSobolevPrincipalValue_bijective_of_pos (F := F) T zero_lt_one hJ).1 hq hv hp f g
+
+end PositiveTwistCancellation
 
 private theorem divisorialThetaRepresentative_next_sdiff (S : Finset V) (k : ℕ) :
     primaryDivisorialPlaces F S (k + 1) \ primaryDivisorialPlaces F S k =

@@ -83,7 +83,32 @@ theorem exists_physical_cardinal_of_radial
   · have hne : j ≠ i := fun e ↦ h (e ▸ rfl)
     rw [ite_eq_right h, ite_eq_right hne]
 
-set_option maxHeartbeats 800000 in
+private theorem cardinal_span_le_ker {H ι : Type*} [NormedAddCommGroup H]
+    [NormedSpace ℂ H] [DecidableEq ι] (u : ι → H) (i : ι) (e : H →ₗ[ℂ] ℂ)
+    (he : ∀ j, e (u j) = if j = i then 1 else 0) :
+    Submodule.span ℂ (u '' {j | j ≠ i}) ≤ LinearMap.ker e := by
+  apply Submodule.span_le.mpr
+  rintro _ ⟨j, hj, rfl⟩
+  exact (he j).trans (ite_eq_right hj)
+
+private theorem one_div_le_infDist_of_vanishing {H : Type*} [NormedAddCommGroup H]
+    [NormedSpace ℂ H] (v : H) (S : Submodule ℂ H) (e : H →ₗ[ℂ] ℂ)
+    {D : ℝ} (hD : 0 ≤ D) (hnorm : ∀ w, ‖e w‖ ≤ ‖w‖ * D)
+    (hone : e v = 1) (hS : S ≤ e.ker) :
+    1 / D ≤ Metric.infDist v (S : Set H) := by
+  have hpos : 0 < D := by
+    apply lt_of_le_of_ne hD
+    intro hz
+    have h := hnorm v
+    rw [hone, norm_one, ← hz, mul_zero] at h
+    exact (not_le_of_gt zero_lt_one) h
+  refine (Metric.le_infDist (x := v) (s := (S : Set H)) ⟨0, S.zero_mem⟩).2 ?_
+  intro w hw
+  rw [div_le_iff₀ hpos, dist_eq_norm]
+  have hz : e w = 0 := hS hw
+  have h := hnorm (v - w)
+  rwa [map_sub, hone, hz, sub_zero, norm_one] at h
+
 /-- Any physical cardinal witness bounds the same reciprocal-weight jet
 distance that occurs in (10.3.2.7). The span ranges over all the other admitted jets. -/
 theorem one_div_norm_le_jet_infDist
@@ -104,25 +129,11 @@ theorem one_div_norm_le_jet_infDist
     change (T.symm (u j)) y = _
     exact ((spectralSobolevPairing_dual (neg_le_self hα) hs (T.symm (u j)) y).2.trans
       (congrArg (spectralSobolevPairing y) (T.apply_symm_apply (u j)))).trans (hpair j)
-  let S := Submodule.span ℂ (u '' {j | j ≠ i})
-  have hS : S ≤ e.ker := Submodule.span_le.mpr <| by
-    rintro _ ⟨j, hj, rfl⟩
-    exact (he j).trans (ite_eq_right hj)
-  have hnorm (v) : ‖e v‖ ≤ ‖v‖ * ‖y‖ := by
-    calc ‖e v‖ ≤ ‖T.symm v‖ * ‖y‖ := (T.symm v).le_opNorm y
-         _ = ‖v‖ * ‖y‖ := by rw [T.symm.norm_map]
-  have hone : e (u i) = 1 := (he i).trans (ite_eq_left rfl)
-  have hpos : 0 < ‖y‖ := by
-    by_contra! h
-    have hzero := le_antisymm h (norm_nonneg y)
-    have := hnorm (u i)
-    norm_num [hone, hzero] at this
-  change 1 / ‖y‖ ≤ Metric.infDist (u i) (S : Set _)
-  refine (Metric.le_infDist (x := u i) (s := (S : Set _)) ⟨0, S.zero_mem⟩).2 ?_
-  intro v hv
-  rw [div_le_iff₀ hpos, dist_eq_norm]
-  calc (1 : ℝ) = ‖e (u i - v)‖ := by rw [map_sub, hone, show e v = 0 from hS hv, sub_zero, norm_one]
-       _ ≤ _ := hnorm _
+  apply one_div_le_infDist_of_vanishing (u i) _ e (norm_nonneg y) _
+    ((he i).trans (ite_eq_left rfl)) (cardinal_span_le_ker u i e he)
+  intro v
+  calc ‖e v‖ ≤ ‖T.symm v‖ * ‖y‖ := (T.symm v).le_opNorm y
+       _ = ‖v‖ * ‖y‖ := by rw [T.symm.norm_map]
 
 private theorem eq_of_component_site_order
     {χ : PontryaginDual C₁ → PontryaginDual C𝔽} {a s : ℝ} {i j : SpectralStripJetIndex χ a 1 s}

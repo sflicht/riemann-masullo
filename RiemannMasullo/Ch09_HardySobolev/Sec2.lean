@@ -1571,6 +1571,12 @@ private theorem iteratedDeriv_exp_moment_of_measurable {X : Type*} [MeasurableSp
     (hderiv 0 w hw).differentiableAt.differentiableWithinAt) (hS.mem_nhds hz),
     hFi k z hz, hiter k z hz⟩
 
+/-- Integrable exponential moments on a real interval give a holomorphic
+Laplace transform on its vertical strip, with all derivatives obtained under
+the integral sign. -/
+alias analyticAt_laplace_integral_and_iteratedDeriv := iteratedDeriv_exp_moment_of_measurable
+
+
 /-- Differentiation under the integral sign for exponential moments on the real line with
 Lebesgue measure. -/
 private theorem iteratedDeriv_exp_moment {h : ℝ → ℂ} {α β : ℝ}
@@ -5690,5 +5696,31 @@ theorem modulatedIntervalSobolev_cutoff_closure (_hms : Surjective m) (a b A s :
 -- right target even though the induced Mellin map on that arrow has one-sided source.
 
 end ModulatedInterval
+
+/-- On the closed base interval, each admissible Mellin derivative is represented
+by one continuous functional on the weighted scalar space. Its action agrees
+with the Mellin derivative on profiles from every larger open strip. -/
+theorem scalarIntervalSobolev_admitted_mellin_functional (a b s : ℝ) (hs : 0 ≤ s)
+    (z : ℂ) (k : ℕ) (hz : z.re ∈ Ioo a b ∨ z.re ∈ Icc a b ∧ 2 * (k : ℝ) + 1 < s) :
+    let E := CompactIntervalSobolev volume id a b s
+    ∃ Λ : StrongDual ℂ E, ∀ (I : Set ℝ), IsOpen I → z.re ∈ I →
+      ∀ (p : PositiveRealExponentialDecay I) (x : E), (x : ℝ → ℂ) =ᵐ[volume] p.val →
+        Λ x = iteratedDeriv k (mellin (fun t ↦ p.val (Real.log t))) z := by
+  intro E
+  have hintegral : ∃ Λ : StrongDual ℂ E, ∀ x : E,
+      Λ x = ∫ t : ℝ, x t * (t : ℂ)^k * Complex.exp (z * (t : ℂ)) := by
+    rcases hz with h | ⟨h,hk⟩
+    · obtain ⟨Λ,hΛ⟩ := scalarIntervalSobolev_eval_interior a b s hs z h k
+      exact ⟨Λ, fun x ↦ (hΛ x).2⟩
+    · obtain ⟨Λ,hΛ⟩ := intervalSobolev_boundary_moment_functional a b s k z h hk MeasurableSet.univ
+      refine ⟨Λ, fun x ↦ ?_⟩
+      simpa only [Set.indicator_univ, mul_assoc] using (hΛ x).2
+  obtain ⟨Λ,hΛ⟩ := hintegral
+  refine ⟨Λ, fun I hI hz p x hx ↦ ?_⟩
+  rw [hΛ, scalarDecay_mellin_deriv hI p k hz, mellin_logProfile (fun t : ℝ ↦ (t : ℂ)^k * p.val t)]
+  apply integral_congr_ae
+  filter_upwards [hx] with t ht
+  rw [ht]
+  ring
 
 end RiemannMasullo
