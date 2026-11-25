@@ -33,13 +33,15 @@ set_option quotPrecheck false in
 local notation "windowZeros(" f ", " b ", " a ")" =>
   {z : ℂ // 0 < MeromorphicOn.divisor (f : ℂ → ℂ) univ z ∧ |Complex.re z - (b : ℝ)| < (a : ℝ)}
 
-/-- A square-root bound on the total weight in each unit height range gives a summable inverse-
-square weight. -/
-private theorem summable_zeroWeights_of_bins {ι : Type*}
+/-- A uniform square-root bound for the mass in each unit height bin
+bounds the inverse-square moment by a constant times the convergent
+three-halves power series. -/
+theorem tsum_zeroWeights_le_of_bins {ι : Type*}
     (h m : ι → ℝ) (hm : ∀ i, 0 ≤ m i) (C : ℝ)
     (hcount : ∀ (n : ℕ) (S : Finset ι), (∀ i ∈ S, ⌊|h i|⌋₊ = n) →
       ∑ i ∈ S, m i ≤ C * ((n : ℝ) + 1) ^ (1 / 2 : ℝ)) :
-    Summable (fun i ↦ m i / (1 + |h i|) ^ 2) := by
+    Summable (fun i ↦ m i / (1 + |h i|) ^ 2) ∧
+      (∑' i, m i / (1 + |h i|) ^ 2) ≤ C * ∑' n : ℕ, 1 / ((n : ℝ) + 1) ^ (3 / 2 : ℝ) := by
   classical
   let b (i : ι) := ⌊|h i|⌋₊
   let u (n : ℕ) := C / ((n : ℝ) + 1) ^ (3 / 2 : ℝ)
@@ -47,7 +49,10 @@ private theorem summable_zeroWeights_of_bins {ι : Type*}
     have h := ((Real.summable_one_div_nat_add_rpow 1 (3 / 2)).2 (by norm_num)).mul_left C
     simpa [u, abs_of_nonneg, add_nonneg, div_eq_mul_inv] using h
   have hC : 0 ≤ C := by simpa using hcount 0 ∅ (by simp)
-  apply summable_of_sum_le (c := ∑' n, u n) (fun i ↦ div_nonneg (hm i) (sq_nonneg _))
+  suffices hbound : ∀ S : Finset ι, (∑ i ∈ S, m i / (1 + |h i|) ^ 2) ≤ ∑' n, u n by
+    have hnon (i) : 0 ≤ m i / (1 + |h i|) ^ 2 := div_nonneg (hm i) (sq_nonneg _)
+    refine ⟨summable_of_sum_le hnon hbound, (Real.tsum_le_of_sum_le hnon hbound).trans_eq ?_⟩
+    simp only [u, div_eq_mul_inv, one_mul, tsum_mul_left]
   intro S
   have hf (n : ℕ) : ∑ i ∈ S with b i = n, m i / (1 + |h i|) ^ 2 ≤ u n := by
     let T := S.filter (fun i ↦ b i = n)
@@ -73,6 +78,15 @@ private theorem summable_zeroWeights_of_bins {ι : Type*}
       (Finset.sum_fiberwise_of_maps_to (fun i hi ↦ Finset.mem_image_of_mem b hi) _).symm
     _ ≤ ∑ n ∈ S.image b, u n := Finset.sum_le_sum (fun n _ ↦ hf n)
     _ ≤ ∑' n, u n := hu.sum_le_tsum _ fun _ _ ↦ div_nonneg hC (Real.rpow_nonneg (by positivity) _)
+
+/-- A square-root bound on the total weight in each unit height range gives a summable inverse-
+square weight. -/
+private theorem summable_zeroWeights_of_bins {ι : Type*}
+    (h m : ι → ℝ) (hm : ∀ i, 0 ≤ m i) (C : ℝ)
+    (hcount : ∀ (n : ℕ) (S : Finset ι), (∀ i ∈ S, ⌊|h i|⌋₊ = n) →
+      ∑ i ∈ S, m i ≤ C * ((n : ℝ) + 1) ^ (1 / 2 : ℝ)) :
+    Summable (fun i ↦ m i / (1 + |h i|) ^ 2) :=
+  (tsum_zeroWeights_le_of_bins h m hm C hcount).1
 
 /-- Jensen’s inequality bounds the sum of orders on any finite subset of the smaller disc. -/
 private theorem zeroCount_disk_sum {f : ℂ → ℂ} {c : ℂ} {r R B : ℝ}
@@ -121,6 +135,20 @@ private theorem zeroCount_local_order {L Λ : ℂ → ℂ} (hΛ : MeromorphicOn 
   have : (meromorphicOrderAt Λ z).untop₀ ≤ (analyticOrderNatAt L z : ℤ) := by
     simpa using WithTop.untop₀_le_untop₀ (WithTop.coe_ne_top : ((analyticOrderNatAt L z : ℤ) : WithTop ℤ) ≠ ⊤) h
   exact_mod_cast this
+
+/-- Jensen's inequality bounds a finite sum of divisor multiplicities by the
+growth of an analytic comparison function whose local orders dominate them. -/
+theorem sum_divisor_le_log_of_disk_bound {Λ L : ℂ → ℂ} (hΛ : MeromorphicOn Λ univ)
+    (hcmp : ∀ z, meromorphicOrderAt Λ z ≤ meromorphicOrderAt L z)
+    {c : ℂ} {r R B : ℝ} (hr : 0 < r) (hrR : r < R)
+    (ha : AnalyticOnNhd ℂ L (closedBall c R)) (hc : L c ≠ 0)
+    (hB : ∀ z ∈ closedBall c R, ‖L z / L c‖ ≤ B)
+    (S : Finset ℂ) (hS : ∀ z ∈ S, z ∈ closedBall c r) :
+    ∑ z ∈ S, (MeromorphicOn.divisor Λ univ z : ℝ) ≤ Real.log B / Real.log (R / r) := by
+  apply le_trans (Finset.sum_le_sum fun z hz ↦
+    zeroCount_local_order hΛ (hr.trans hrR).le ha hc hcmp
+      (closedBall_subset_closedBall hrR.le (hS z hz)))
+  exact zeroCount_disk_sum hr hrR ha hc hB S hS
 
 private theorem zeroCount_compact {f : ℂ → ℂ} (K : Set ℂ) (hK : IsCompact K) :
     {z : ℂ | z ∈ K ∧ MeromorphicOn.divisor f univ z ≠ 0}.Finite := by
@@ -241,23 +269,25 @@ private theorem zeroCount_log_bound (B E r R : ℝ) (hB : 0 < B) (hE : 0 ≤ E)
   nlinarith [mul_le_mul_of_nonneg_left hl hE,
     mul_le_mul_of_nonneg_left hv (le_max_right (Real.log B) 0), le_max_left (Real.log B) 0]
 
-/-- Jensen's formula bounds the total multiplicity in a fixed-width rectangle of height two. -/
-private theorem zeroCount_window_at_height {Λ L : ℂ → ℂ} {σ : ℝ} {k : ℕ}
+/-- Compare a finite set of zeros in a horizontal rectangle with a
+single Jensen disk, retaining the logarithm of the center-normalized bound. -/
+private theorem zeroCount_window_jensen {Λ L : ℂ → ℂ} {σ : ℝ} {k : ℕ}
     (hΛ : MeromorphicOn Λ univ) (hL : MeromorphicNFOn L univ)
     (hcmp : ∀ z, meromorphicOrderAt Λ z ≤ meromorphicOrderAt L z)
     (hGrowth : StripGrowth(L)) (hne : ∀ᶠ t : ℝ in atAbsTop, L ⟨σ, t⟩ ≠ 0)
     (hinv : InverseGrowth(L, σ, k)) (b a : ℝ) :
-    ∃ K T : ℝ, 0 ≤ K ∧ ∀ t : ℝ, T ≤ |t| → ∀ S : Finset (windowZeros(Λ, b, a)),
-      (∀ z ∈ S, |z.val.im - t| ≤ 1) →
-      ∑ z ∈ S, (MeromorphicOn.divisor Λ univ z.val : ℝ) ≤ K * (1 + |t|) ^ (1 / 2 : ℝ) := by
+    ∃ B E T r R : ℝ, 0 < B ∧ 0 ≤ E ∧ 0 < r ∧ r < R ∧
+      ∀ t : ℝ, T ≤ |t| → ∀ S : Finset (windowZeros(Λ, b, a)),
+        (∀ z ∈ S, |z.val.im - t| ≤ 1) →
+        ∑ z ∈ S, (MeromorphicOn.divisor Λ univ z.val : ℝ) ≤
+          Real.log (B * (1 + |t|) ^ E) / Real.log (R / r) := by
   classical
   let r := |a| + |b - σ| + 2
   let R := r + 1
   have hr : 0 < r := by dsimp [r]; positivity
   have hrR : r < R := lt_add_one _
   obtain ⟨B, E, T, hB, hE, hdata⟩ := zeroCount_disk_growth hL hGrowth hne hinv R (hr.trans hrR)
-  obtain ⟨K, hK, hlog⟩ := zeroCount_log_bound B E r R hB hE hr hrR
-  refine ⟨K, T, hK, fun t ht S hS ↦ ?_⟩
+  refine ⟨B, E, T, r, R, hB, hE, hr, hrR, fun t ht S hS ↦ ?_⟩
   let c : ℂ := ⟨σ, t⟩
   obtain ⟨ha, hc, hbound⟩ := hdata t ht
   have hinside (z : windowZeros(Λ, b, a)) (hz : |z.val.im - t| ≤ 1) : z.val ∈ closedBall c r := by
@@ -274,14 +304,45 @@ private theorem zeroCount_window_at_height {Λ L : ℂ → ℂ} {σ : ℝ} {k : 
     intro z hz
     obtain ⟨i, hi, rfl⟩ := Finset.mem_map.mp hz
     exact hinside i (hS i hi)
-  calc
-    _ ≤ ∑ z ∈ S, (analyticOrderNatAt L z.val : ℝ) := by
-      apply Finset.sum_le_sum
-      intro z hz
-      exact zeroCount_local_order hΛ (hr.trans hrR).le ha hc hcmp
-        (closedBall_subset_closedBall hrR.le (hinside z (hS z hz)))
-    _ = ∑ z ∈ S.map emb, (analyticOrderNatAt L z : ℝ) := (Finset.sum_map S emb (fun z ↦ (analyticOrderNatAt L z : ℝ))).symm
-    _ ≤ _ := (zeroCount_disk_sum hr hrR ha hc hbound _ hmem).trans (hlog _ (by linarith [abs_nonneg t]))
+  simpa only [Finset.sum_map, emb, Function.Embedding.coe_subtype] using
+    sum_divisor_le_log_of_disk_bound hΛ hcmp hr hrR ha hc hbound (S.map emb) hmem
+
+/-- At all sufficiently large positive or negative heights, the total
+multiplicity in a fixed-width rectangle of height two is at most a constant
+times one plus the logarithm of the height. -/
+theorem sum_divisor_le_log_height_window {Λ L : ℂ → ℂ} {σ : ℝ} {k : ℕ}
+    (hΛ : MeromorphicOn Λ univ) (hL : MeromorphicNFOn L univ)
+    (hcmp : ∀ z, meromorphicOrderAt Λ z ≤ meromorphicOrderAt L z)
+    (hGrowth : StripGrowth(L)) (hne : ∀ᶠ t : ℝ in atAbsTop, L ⟨σ, t⟩ ≠ 0)
+    (hinv : InverseGrowth(L, σ, k)) (b a : ℝ) :
+    ∃ K T : ℝ, 0 ≤ K ∧ ∀ t : ℝ, T ≤ |t| → ∀ S : Finset (windowZeros(Λ, b, a)),
+      (∀ z ∈ S, |z.val.im - t| ≤ 1) →
+      ∑ z ∈ S, (MeromorphicOn.divisor Λ univ z.val : ℝ) ≤ K * (1 + Real.log (1 + |t|)) := by
+  obtain ⟨B, E, T, r, R, hB, hE, hr, hrR, hcount⟩ :=
+    zeroCount_window_jensen hΛ hL hcmp hGrowth hne hinv b a
+  have hd : 0 < Real.log (R / r) := Real.log_pos ((one_lt_div hr).mpr hrR)
+  refine ⟨(|Real.log B| + E) / Real.log (R/r), T, div_nonneg (add_nonneg (abs_nonneg _) hE) hd.le,
+    fun t ht S hS ↦ (hcount t ht S hS).trans ?_⟩
+  have ht₁ : 1 ≤ 1 + |t| := by linarith [abs_nonneg t]
+  have hp := zero_lt_one.trans_le ht₁
+  rw [Real.log_mul hB.ne' (Real.rpow_pos_of_pos hp E).ne', Real.log_rpow hp,
+    div_mul_eq_mul_div, div_le_div_iff_of_pos_right hd]
+  nlinarith [le_abs_self (Real.log B), mul_nonneg (abs_nonneg (Real.log B)) (Real.log_nonneg ht₁)]
+
+/-- Jensen's formula bounds the total multiplicity in a fixed-width rectangle of height two. -/
+private theorem zeroCount_window_at_height {Λ L : ℂ → ℂ} {σ : ℝ} {k : ℕ}
+    (hΛ : MeromorphicOn Λ univ) (hL : MeromorphicNFOn L univ)
+    (hcmp : ∀ z, meromorphicOrderAt Λ z ≤ meromorphicOrderAt L z)
+    (hGrowth : StripGrowth(L)) (hne : ∀ᶠ t : ℝ in atAbsTop, L ⟨σ, t⟩ ≠ 0)
+    (hinv : InverseGrowth(L, σ, k)) (b a : ℝ) :
+    ∃ K T : ℝ, 0 ≤ K ∧ ∀ t : ℝ, T ≤ |t| → ∀ S : Finset (windowZeros(Λ, b, a)),
+      (∀ z ∈ S, |z.val.im - t| ≤ 1) →
+      ∑ z ∈ S, (MeromorphicOn.divisor Λ univ z.val : ℝ) ≤ K * (1 + |t|) ^ (1 / 2 : ℝ) := by
+  obtain ⟨B, E, T, r, R, hB, hE, hr, hrR, hcount⟩ :=
+    zeroCount_window_jensen hΛ hL hcmp hGrowth hne hinv b a
+  obtain ⟨K, hK, hlog⟩ := zeroCount_log_bound B E r R hB hE hr hrR
+  exact ⟨K, T, hK, fun t ht S hS ↦
+    (hcount t ht S hS).trans (hlog _ (by linarith [abs_nonneg t]))⟩
 
 /-- In a fixed vertical strip, the positive orders of a meromorphic function are summable
 with weight `(1 + |Im z|)⁻²` if they are bounded by the orders of a meromorphic function of

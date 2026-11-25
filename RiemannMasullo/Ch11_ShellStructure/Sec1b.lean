@@ -3672,6 +3672,41 @@ private theorem exists_carvingTest_value_one (S : Finset V) :
   change (b 0 : ℂ) = 1
   exact_mod_cast hb
 
+/-- Every compactly supported smooth logarithmic profile agrees on an entire positive norm
+half-line with the homogeneous theta function of a global polar-free adelic test. The
+character factor records the norm-one part relative to the canonical norm section. -/
+theorem exists_homogeneousAdelicTheta_eq_profile_on_halfLine (χ : PontryaginDual C𝔽)
+    {a : ℝ} (ha : 0 < a) (φ : ℝ → ℂ) (hc : HasCompactSupport φ) (hs : ContDiff ℝ (⊤ : ENat) φ) :
+    ∃ f : adelePolarSubspace F, ∀ g : C𝔽, a ≤ norm𝔽 g →
+      homogeneousAdelicTheta (ωOf(χ)) f.val g =
+        (χ g : ℂ)⁻¹ * (χ (QuotientGroup.mk (canonicalIdeleNormSection F (ideleClassNorm F g))) : ℂ) *
+          φ (Real.log (norm𝔽 g)) := by
+  obtain ⟨S, hS⟩ : ∃ S, ideleClassNormTwist χ 0 ∈ unramifiedOutside F S :=
+    mem_iUnion.mp ((iUnion_unramifiedOutside F).symm ▸ mem_univ (ideleClassNormTwist χ 0))
+  obtain ⟨v, B, h₀, hF, hB, hv⟩ := exists_carving_radial_lift χ hS a ha φ hc hs
+  let f₀ : adelePolarSubspace F := ⟨sAdeleSchwartzToGlobal F S v,
+    (sAdeleSchwartzToGlobal_mem_polarSubspace_iff S v).2 ⟨h₀, hF⟩⟩
+  obtain ⟨T, -, -, hT⟩ :=
+    cutoff_bound_depleted_theta S ∅ (Finset.disjoint_empty_right S) v a B ha hB
+  obtain ⟨k, hk⟩ := exists_carvingTest_value_one (F := F) (S ∪ T)
+  let f : adelePolarSubspace F :=
+    ⟨adelePrincipalValue F T f₀.val, adelePrincipalValue_mem_polarSubspace T f₀⟩
+  refine ⟨f, fun g hg ↦ ?_⟩
+  change (∫ h : C₁, adelicTheta f.val (h.val * g) * (ωOf(χ) h : ℂ) ∂μ₁) = _
+  trans avg[ωOf(χ), sLocalCarvingTheta S v] g
+  · apply integral_congr_ae
+    filter_upwards with h
+    have hnorm : a ≤ norm𝔽 (h.val * g) := by
+      change a ≤ ((ideleClassNorm F (h.val * g)).val : ℝ)
+      rw [map_mul, MonoidHom.mem_ker.mp h.property, one_mul]
+      exact hg
+    exact congrArg (· * (ωOf(χ) h : ℂ)) (hT k hk (h.val * g) hnorm)
+  · refine (hv g hg).trans ?_
+    congr 1
+    change (((χ (g * (QuotientGroup.mk (canonicalIdeleNormSection F (ideleClassNorm F g)))⁻¹))⁻¹ :
+      Circle) : ℂ) = _
+    simp [map_mul, map_inv, mul_comm]
+
 /-- The projected generator of a norm-bounded polar-free test belongs to every
 cutoff stage, by depleting the finitely many relevant outside places. -/
 private theorem carving_bounded_generator_mem_limit {S : Finset V} (χ : PontryaginDual C𝔽)

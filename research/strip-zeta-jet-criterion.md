@@ -19,6 +19,18 @@ $$
 
 Neither zero simplicity nor a height-independent multiplicity bound is assumed in this equivalence. Condition (1) is an arithmetic hypothesis. Proving it is a separate problem.
 
+### A criterion using only the zeros
+
+The trivial-component finite Gram bound is also equivalent in Lean to the existence of constants $E,H$ such that, at every zeta zero $\rho$ with $|\Im\rho|\ge H$,
+
+$$
+\sum_{0<|\nu-\rho|<1/4}m_\nu\log\frac{1}{4|\nu-\rho|} \le E\log(2+|\Im\rho|).
+$$
+
+The sum runs over distinct neighboring zeros, each counted with its multiplicity. This criterion tests their collective spacing using only their locations and orders. The finite-block witness gives necessity. Fable’s circle-mean estimate gives the coefficient lower bound from this inequality, and hence sufficiency. [Geometric equivalence](StripTraceConverse.lean)
+
+Upstream #7455 ranges over all angular characters and assumes $s>1$. In the fork, a separate Lean implication embeds the trivial-character sites into the upstream index, extends the sample function, and keeps the test bound and the shared ambient Gram block. A normalized basepoint exists, so the all-character assertion over $\mathbf Q$ implies (1) without a choice of character as an additional hypothesis. The explicit implication uses only the standard axioms. Its application to the upstream declaration inherits that declaration’s open proof. [Restriction and application to #7455](StripUpstreamConsequences.lean)
+
 ## The two inputs from the trace problem
 
 Use the radial variable $x=\log|g|$ and Mellin transform $f\mapsto \int f(x)e^{(u-1/2)x}\,dx$. Up to the fixed Haar scalar, the ambient squared norm integrates $|f(x)|^2 e^{2|x|}(1+x^2)^{s/2}$. The $k$th jet evaluates the $k$th derivative in $u$. The quotient has the induced norm. Write $\Lambda_{\rho,k}$ for the realized jet functional and $x_{\rho,k}$ for its biorthogonal vector.
@@ -186,7 +198,7 @@ From the root of the fork, build the imported project modules and check the rese
 lake build $(awk '($1 == "import" || ($1 == "public" && $2 == "import")) && $NF ~ /^(Mathlib|RiemannMasullo)[.]/ {print $NF}' research/CircleMeanTransfer.lean research/Strip*.lean | sort -u)
 research_out=.lake/build/lib/lean/research
 mkdir -p "$research_out"
-for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated StripSimpleGram StripInteriorMellin CircleMeanTransfer StripZetaMean StripGramConverse StripMellinPolynomial StripTraceConverse
+for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated StripSimpleGram StripInteriorMellin CircleMeanTransfer StripZetaMean StripGramConverse StripMellinPolynomial StripTraceConverse StripUpstreamConsequences
 do
   lake env lean -DmaxSynthPendingDepth=3 -DautoImplicit=false -DrelaxedAutoImplicit=false -DwarningAsError=true -o "$research_out/$name.olean" "research/$name.lean" || exit 1
 done

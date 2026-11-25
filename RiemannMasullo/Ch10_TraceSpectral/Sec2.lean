@@ -8672,6 +8672,232 @@ private theorem spectralStripJet_order_and_margin_multiplicity_bounded
     ∃ M : ℕ, ∀ (ω : PontryaginDual C₁) (σ t : ℝ), multiplicity(χ ω, shift(σ, t)) ≤ M := by
   sorry
 
+/-- Paper: Proposition 10.2.2.2, pp. 446–447. For one chosen Hecke character, each
+multiple-zero line strictly to the right of the centre has a representative at bounded
+height. The height bound may depend on the character.
+Reconstruction: This isolates the single-character part of the strip margin.
+Gap: Discreteness on compact rectangles does not control new abscissae at increasing heights. -/
+private theorem spectralStripJet_multiple_zero_bounded_height_representatives
+    (χ : PontryaginDual C₁ → PontryaginDual C𝔽) (_hχ : IsSpectralBasepointChoice χ)
+    (ω : PontryaginDual C₁) :
+    ∃ T : ℝ, ∀ (σ t : ℝ), σ ∈ Ioo (1 / 2 : ℝ) 1 → 1 < multiplicity(χ ω, shift(σ, t)) →
+      ∃ u : ℝ, |u| ≤ T ∧ 1 < multiplicity(χ ω, shift(σ, u)) := by
+  sorry
+
+/-- Paper: Proposition 10.2.2.2, pp. 446–447. For each choice of basepoints the real
+interval (1/2, 1) contains only finitely many distinct multiple zeros of the family.
+Reconstruction: This tests only ordinate zero. A different choice of basepoint may move
+one prescribed ordinate to zero independently in each norm-one component.
+Gap: Compactness gives finiteness for each character on this segment. Finiteness across
+components for every choice of basepoints is open. -/
+private theorem spectralStripJet_multiple_real_zeros_finite
+    (χ : PontryaginDual C₁ → PontryaginDual C𝔽) (_hχ : IsSpectralBasepointChoice χ) :
+    {σ : ℝ | σ ∈ Ioo (1 / 2 : ℝ) 1 ∧ ∃ ω : PontryaginDual C₁,
+      1 < multiplicity(χ ω, (σ : ℂ))}.Finite := by
+  sorry
+
+/-- For one character, a bounded height interval contributes only finitely many multiple-zero
+abscissae in the closed right half of the critical strip. -/
+private theorem spectralStripJet_multiple_zero_lines_finite_on_compact
+    (ψ : PontryaginDual C𝔽) (T : ℝ) :
+    {σ : ℝ | σ ∈ Icc (1 / 2 : ℝ) 1 ∧ ∃ t : ℝ, |t| ≤ T ∧
+      1 < multiplicity(ψ, shift(σ, t))}.Finite := by
+  let R := (Icc (1 / 2 : ℝ) 1) ×ˢ (Icc (-T) T)
+  let A (p : ℝ × ℝ) : ℂ := shift(p.1, p.2)
+  have hA : Continuous A :=
+    (Complex.continuous_ofReal.comp continuous_fst).add
+      ((Complex.continuous_ofReal.comp continuous_snd).mul continuous_const)
+  have hK : IsCompact (A '' R) := (isCompact_Icc.prod isCompact_Icc).image hA
+  let L := continuedCompletedHeckeL ψ
+  have hL : MeromorphicOn L (A '' R) :=
+    fun z _ ↦ (continuedCompletedHeckeL_spec ψ).1.meromorphicOn z (mem_univ z)
+  apply (((MeromorphicOn.divisor L (A '' R)).finiteSupport hK).image Complex.re).subset
+  rintro σ ⟨hσ, t, ht, hm⟩
+  refine ⟨A (σ, t), ?_, by simp [A]⟩
+  change MeromorphicOn.divisor L (A '' R) (A (σ, t)) ≠ 0
+  rw [hL.divisor_apply ⟨(σ, t), ⟨hσ, abs_le.mp ht⟩, rfl⟩]
+  change 1 < (meromorphicOrderAt L (A (σ, t))).untop₀.toNat at hm
+  exact fun heq ↦ by rw [heq] at hm; simp at hm
+
+/-- Translating a unitary norm chart to ordinate zero preserves its norm-one component and
+all completed Hecke zero multiplicities. -/
+private theorem spectralStripJet_recenter (ψ : PontryaginDual C𝔽) (t : ℝ) :
+    ∃ θ : PontryaginDual C𝔽, θ.comp restriction = ψ.comp restriction ∧ ∀ σ : ℝ,
+      multiplicity(θ, (σ : ℂ)) = multiplicity(ψ, shift(σ, t)) := by
+  let a := (t : ℂ) * Complex.I
+  let c := ideleClassNormTwist ψ a
+  have hn (g : C𝔽) : ‖c g‖ = 1 := by
+    change ‖(ψ g : ℂ) * ((((ideleClassNorm F g).val : ℝ) : ℂ) ^ a)‖ = 1
+    rw [norm_mul, Circle.norm_coe, Complex.norm_cpow_eq_rpow_re_of_pos
+      (NNReal.coe_pos.mpr (Units.zero_lt _))]
+    simp [a]
+  let θ : PontryaginDual C𝔽 :=
+    { toFun := fun g ↦ ⟨c g, mem_sphere_zero_iff_norm.mpr (hn g)⟩
+      map_one' := Subtype.ext (map_one c)
+      map_mul' := fun x y ↦ Subtype.ext (map_mul c x y)
+      continuous_toFun := c.continuous.subtype_mk _ }
+  have hθ : ideleClassNormTwist θ 0 = ideleClassNormTwist ψ a := by
+    ext1 g
+    change c g * _ ^ (0 : ℂ) = c g
+    simp
+  have hchart (z : ℂ) : ideleClassNormTwist θ z = ideleClassNormTwist ψ (z + a) := by
+    simpa only [zero_add, add_comm a z] using ideleClassNormTwist_add_of_eq hθ z
+  refine ⟨θ, ?_, fun σ ↦ ?_⟩
+  · ext g : 1
+    apply Subtype.ext
+    change (ψ g.val : ℂ) * ((((ideleClassNorm F g.val).val : ℝ) : ℂ) ^ a) = ψ g.val
+    rw [show ideleClassNorm F g.val = 1 from g.property]
+    simp
+  · have horder (f : adelePolarSubspace F) :
+        meromorphicOrderAt (fun z ↦ globalThetaMellinIntegral f.val (ideleClassNormTwist θ z)) (σ : ℂ) =
+          meromorphicOrderAt (fun z ↦ globalThetaMellinIntegral f.val (ideleClassNormTwist ψ z)) ((σ : ℂ) + a) := by
+      simp_rw [hchart]
+      exact meromorphicOrderAt_comp_add_const_eq_meromorphicOrderAt (f := fun z ↦
+        globalThetaMellinIntegral f.val (ideleClassNormTwist ψ z)) (c := a) (x := (σ : ℂ))
+    have h := isLeast_globalThetaMellinIntegral_orders θ (σ : ℂ)
+    simp_rw [horder] at h
+    have he := h.unique (isLeast_globalThetaMellinIntegral_orders ψ ((σ : ℂ) + a))
+    have hclip (x : WithTop ℤ) : (max 0 x).untop₀.toNat = x.untop₀.toNat := by
+      cases x with
+      | top => simp
+      | coe n => simp only [← WithTop.coe_zero, ← WithTop.coe_max, WithTop.untop₀_coe]; omega
+    exact (hclip _).symm.trans ((congrArg (fun x : WithTop ℤ ↦ x.untop₀.toNat) he).trans (hclip _))
+
+/-- Reflect a multiple zero into the opposite half of the strip by the completed functional
+equation. Reflection negates the ordinate and replaces the character by its inverse. -/
+private theorem spectralStripJet_multiple_zero_reflect (ψ : PontryaginDual C𝔽) (σ t : ℝ) :
+    multiplicity(ψ, shift(σ, t)) = multiplicity(ψ⁻¹, shift(1 - σ, (-t : ℝ))) := by
+  obtain ⟨ε, hε, hne, he⟩ := completedHeckeL_continuation_functionalEquation ψ _ _
+    (continuedCompletedHeckeL_spec ψ).1 (continuedCompletedHeckeL_spec ψ).2
+    (continuedCompletedHeckeL_spec ψ⁻¹).1 (continuedCompletedHeckeL_spec ψ⁻¹).2
+  let r (z : ℂ) := 1 - z
+  have heq : continuedCompletedHeckeL ψ⁻¹ ∘ r = ε * continuedCompletedHeckeL ψ := funext he
+  have hr : HasDerivAt r (-1) (shift(σ, t)) := (hasDerivAt_id _).const_sub 1
+  have ho := meromorphicOrderAt_comp_of_deriv_ne_zero (f := continuedCompletedHeckeL ψ⁻¹)
+    (show AnalyticAt ℂ r (shift(σ, t)) by dsimp [r]; fun_prop) (hr.deriv.trans_ne (by norm_num))
+  rw [heq, meromorphicOrderAt_mul_of_ne_zero (hε.analyticAt _) (hne _)] at ho
+  have hz : r (shift(σ, t)) = shift(1 - σ, (-t : ℝ)) := by
+    dsimp [r]
+    push_cast
+    ring
+  rw [hz] at ho
+  rw [ho]
+
+/-- A multiple zero with real part greater than one half lies in the open critical strip. -/
+private theorem spectralStripJet_multiple_zero_re_lt_one (ψ : PontryaginDual C𝔽)
+    {σ t : ℝ} (hσ : 1 / 2 < σ) (h : 1 < multiplicity(ψ, shift(σ, t))) : σ < 1 := by
+  have hp : 0 < vanishingOrder(ψ, shift(σ, t)) := by
+    generalize vanishingOrder(ψ, shift(σ, t)) = o at *
+    cases o with
+    | top => simp at h
+    | coe k =>
+      rw [WithTop.untop₀_coe] at h
+      exact_mod_cast (by omega : 0 < k)
+  simpa using completedHeckeL_continuation_zeros ψ _ (continuedCompletedHeckeL_spec ψ).1
+    (continuedCompletedHeckeL_spec ψ).2 (by simpa using (show 0 < σ by linarith)) hp
+
+/-- Choose a witness component for each abscissa, then one abscissa representing each
+component so chosen. A single choice of ordinates sees all the representatives. -/
+private theorem spectralStripJet_multiple_zero_finite_of_slices
+    (R : PontryaginDual C₁ → ℝ → ℝ → Prop)
+    (hfixed : ∀ ω, {σ | ∃ t, R ω σ t}.Finite)
+    (hslice : ∀ τ : PontryaginDual C₁ → ℝ, {σ | ∃ ω, R ω σ (τ ω)}.Finite) :
+    {σ | ∃ ω t, R ω σ t}.Finite := by
+  classical
+  let S := {σ | ∃ ω t, R ω σ t}
+  choose component ordinate hw using fun σ : S ↦ σ.property
+  choose rep hrep using fun ω : range component ↦ ω.property
+  let τ (ω : PontryaginDual C₁) := if h : ω ∈ range component then ordinate (rep ⟨ω, h⟩) else 0
+  have hselected : (range (fun ω ↦ (rep ω : ℝ))).Finite := (hslice τ).subset <| by
+    rintro _ ⟨ω, rfl⟩
+    exact ⟨ω, by simpa only [τ, dite_eq_left ω.property, hrep] using hw (rep ω)⟩
+  have hinj : Injective (fun ω ↦ (rep ω : ℝ)) := fun i j h ↦
+    Subtype.ext <| (hrep i).symm.trans ((congrArg component (Subtype.ext h)).trans (hrep j))
+  have hfin : (range component).Finite := finite_coe_iff.mp ((finite_range_iff hinj).mp hselected)
+  apply (hfin.biUnion fun ω _ ↦ hfixed ω).subset
+  intro σ hσ
+  let p : S := ⟨σ, hσ⟩
+  exact mem_iUnion₂.mpr ⟨component p, mem_range_self p, ordinate p, hw p⟩
+
+/-- The finite-line assertion for every section is equivalent to two tests in the open
+right half of the strip. One tests each component separately over unbounded heights.
+The other uses a single real segment for all components, allowing every choice of section. -/
+private theorem spectralStripJet_multiple_zero_lines_iff :
+    (∀ (χ : PontryaginDual C₁ → PontryaginDual C𝔽), IsSpectralBasepointChoice χ →
+      {σ : ℝ | ∃ (ω : PontryaginDual C₁) (t : ℝ), 1 < multiplicity(χ ω, shift(σ, t))}.Finite) ↔
+    (∀ (χ : PontryaginDual C₁ → PontryaginDual C𝔽), IsSpectralBasepointChoice χ →
+      ∀ ω : PontryaginDual C₁, ∃ T : ℝ, ∀ (σ t : ℝ), σ ∈ Ioo (1 / 2 : ℝ) 1 →
+      1 < multiplicity(χ ω, shift(σ, t)) → ∃ u : ℝ, |u| ≤ T ∧
+        1 < multiplicity(χ ω, shift(σ, u))) ∧
+    (∀ (χ : PontryaginDual C₁ → PontryaginDual C𝔽), IsSpectralBasepointChoice χ →
+      {σ : ℝ | σ ∈ Ioo (1 / 2 : ℝ) 1 ∧ ∃ ω : PontryaginDual C₁,
+        1 < multiplicity(χ ω, (σ : ℂ))}.Finite) := by
+  constructor
+  · intro h
+    constructor
+    · intro χ hχ ω
+      let S := {σ : ℝ | σ ∈ Ioo (1 / 2 : ℝ) 1 ∧ ∃ t : ℝ, 1 < multiplicity(χ ω, shift(σ, t))}
+      have hS : S.Finite := (h χ hχ).subset fun σ hσ ↦ by
+        obtain ⟨t, ht⟩ := hσ.2
+        exact ⟨ω, t, ht⟩
+      choose u hu using fun σ : S ↦ σ.property.2
+      let := hS.fintype
+      obtain ⟨T, hT⟩ := (finite_range (fun σ : S ↦ |u σ|)).bddAbove
+      refine ⟨T, fun σ t hs hm ↦ ?_⟩
+      let p : S := ⟨σ, hs, t, hm⟩
+      exact ⟨u p, hT (mem_range_self p), hu p⟩
+    · intro χ hχ
+      apply (h χ hχ).subset
+      rintro σ ⟨_, ω, hm⟩
+      exact ⟨ω, 0, by simpa using hm⟩
+  · rintro ⟨hfixed, hreal⟩ χ hχ
+    let right (η : PontryaginDual C₁ → PontryaginDual C𝔽) :=
+      {σ : ℝ | σ ∈ Ioo (1 / 2 : ℝ) 1 ∧ ∃ (ω : PontryaginDual C₁) (t : ℝ),
+        1 < multiplicity(η ω, shift(σ, t))}
+    have hright (χ : PontryaginDual C₁ → PontryaginDual C𝔽) (hχ : IsSpectralBasepointChoice χ) :
+        (right χ).Finite := by
+      let R (ω : PontryaginDual C₁) (σ t : ℝ) :=
+        σ ∈ Ioo (1 / 2 : ℝ) 1 ∧ 1 < multiplicity(χ ω, shift(σ, t))
+      have hsingle (ω : PontryaginDual C₁) : {σ | ∃ t, R ω σ t}.Finite := by
+        obtain ⟨T, hT⟩ := hfixed χ hχ ω
+        apply (spectralStripJet_multiple_zero_lines_finite_on_compact (χ ω) T).subset
+        rintro σ ⟨t, hs, hm⟩
+        exact ⟨⟨hs.1.le, hs.2.le⟩, hT σ t hs hm⟩
+      have hslice (τ : PontryaginDual C₁ → ℝ) : {σ | ∃ ω, R ω σ (τ ω)}.Finite := by
+        choose η hres hmove using fun ω ↦ spectralStripJet_recenter (χ ω) (τ ω)
+        have hη : IsSpectralBasepointChoice η := fun ω ↦ (hres ω).trans (hχ ω)
+        apply (hreal η hη).subset
+        rintro σ ⟨ω, hs, hm⟩
+        refine ⟨hs, ω, ?_⟩
+        rw [hmove ω σ]
+        exact hm
+      apply (spectralStripJet_multiple_zero_finite_of_slices R hsingle hslice).subset
+      rintro σ ⟨hs, ω, t, hm⟩
+      exact ⟨ω, t, hs, hm⟩
+    let dual (ω : PontryaginDual C₁) := (χ ω⁻¹)⁻¹
+    have hdual : IsSpectralBasepointChoice dual := by
+      intro ω
+      ext g : 1
+      have hg := DFunLike.congr_fun (hχ (ω⁻¹)) g
+      change ((χ ω⁻¹) g.val)⁻¹ = ω g
+      change (χ ω⁻¹) g.val = (ω g)⁻¹ at hg
+      simp [hg]
+    have hr : (right χ).Finite := hright χ hχ
+    have hd : (right dual).Finite := hright dual hdual
+    apply ((hr.union (hd.image (fun σ : ℝ ↦ 1 - σ))).insert (1 / 2)).subset
+    rintro σ ⟨ω, t, h⟩
+    rcases lt_trichotomy σ (1 / 2) with hl | hc | hr
+    · apply Or.inr
+      apply Or.inr
+      have hz : 1 < multiplicity((χ ω)⁻¹, shift(1 - σ, (-t : ℝ))) := by
+        rwa [← spectralStripJet_multiple_zero_reflect]
+      have half : 1 / 2 < 1 - σ := by linarith
+      refine ⟨1 - σ, ⟨⟨half, spectralStripJet_multiple_zero_re_lt_one (χ ω)⁻¹ (t := -t) half hz⟩, ω⁻¹, -t, ?_⟩,
+        by ring⟩
+      simpa [dual] using hz
+    · exact Or.inl hc
+    · exact Or.inr (Or.inl ⟨⟨hr, spectralStripJet_multiple_zero_re_lt_one (χ ω) (t := t) hr h⟩, ω, t, h⟩)
+
 /-- Paper: Proposition 10.2.2.2, pp. 446–447.
 The multiple zeros of the chosen completed Hecke L-functions lie on finitely many vertical
 lines, over all components of the norm-one dual and all ordinates.
@@ -8680,7 +8906,9 @@ keeps the jets of high order away from the edges of a strip.
 Reconstruction: The paper does not state this. It is the project's formulation of the margin
 that the norm integral of Proposition 10.2.2.2, p. 447, needs, and it is not known whether it
 is what the author intends.
-Gap: No argument is known. The statement follows from the paper's main claim, that all zeros in
+It is reduced below to bounded-height representatives for each character and finiteness on
+the real segment for every choice of basepoints. Both inputs remain open.
+The statement follows from the paper's main claim, that all zeros in
 the critical strip have real part `1/2`, but Proposition 10.2.2.2 stands on the way to that
 claim. For the splitting field of `X³ - 2` it already gives a zero-free strip to the left of
 the line of real part `1` for an Artin L-function (report on #7220). -/
@@ -8688,7 +8916,9 @@ private theorem spectralStripJet_order_and_margin_multiple_zero_lines_finite
     (χ : PontryaginDual C₁ → PontryaginDual C𝔽) (_hχ : IsSpectralBasepointChoice χ) :
     {σ : ℝ | ∃ (ω : PontryaginDual C₁) (t : ℝ),
       1 < multiplicity(χ ω, shift(σ, t))}.Finite := by
-  sorry
+  exact (spectralStripJet_multiple_zero_lines_iff (F := F)).2
+    ⟨spectralStripJet_multiple_zero_bounded_height_representatives,
+      spectralStripJet_multiple_real_zeros_finite⟩ χ _hχ
 
 /-- Near any real number there are only finitely many distinct pairs of real part and
 multiplicity among multiple completed Hecke zeros, over all ordinates and chosen characters.

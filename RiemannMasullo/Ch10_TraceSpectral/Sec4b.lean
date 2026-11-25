@@ -171,6 +171,155 @@ theorem sobolevProjectiveKernelOperator_injective : Injective ξ := by
 
 end ProjectiveKernels
 
+private theorem sobolevProjectiveKernel_transported_iff {X E : Type*}
+    [NormedAddCommGroup X] [NormedSpace ℂ X]
+    [NormedAddCommGroup E] [InnerProductSpace ℂ E] [CompleteSpace E]
+    (e : StrongDual ℂ E ≃ₗᵢ[ℂ] X) (A : E →L[ℂ] E) :
+    let f := e.symm.toContinuousLinearEquiv.toContinuousLinearMap
+    let i : ProjectiveTensor X E →L[ℂ] ProjectiveTensor (StrongDual ℂ E) E :=
+      ⟨projectiveTensorMap f.toLinearMap (LinearMap.id : E →ₗ[ℂ] E),
+        projectiveTensorMap_continuous f (ContinuousLinearMap.id ℂ E)⟩
+    (∃ K, completedProjectiveTensorToOperators (i.completion K) = A) ↔ IsNuclearOperator A := by
+  intro f i
+  rw [isNuclearOperator_iff_isBanachNuclear, isBanachNuclear_iff_mem_range]
+  constructor
+  · rintro ⟨K, rfl⟩
+    exact ⟨_, rfl⟩
+  · rintro ⟨z, hz⟩
+    have onto : Surjective i.completion := completedProjectiveTensorMap_surjective f
+      (ContinuousLinearMap.id ℂ E) e.symm.toHomeomorph.isQuotientMap Topology.IsQuotientMap.id
+    obtain ⟨K, hK⟩ := onto z
+    exact ⟨K, (congrArg (completedProjectiveTensorToOperators (E := E) (F := E)) hK).trans hz⟩
+
+/-- The weighted tensor required in (10.4.3.45), p. 473, exists uniquely exactly when
+the specified ambient operator is nuclear. -/
+theorem existsUnique_sobolevProjectiveKernel_iff_nuclear {α s : ℝ} (ha : 0 ≤ α) (hs : 0 ≤ s)
+    (A : W(α, s) →L[ℂ] W(α, s)) :
+    (∃! K, sobolevProjectiveKernelOperator (F := F) ha hs K = A) ↔ IsNuclearOperator A := by
+  have h := sobolevProjectiveKernel_transported_iff
+    ((modulatedIntervalSobolev_dual m𝔽 ⟨isProperMap_ideleClassNorm F, ideleClassNorm_ne_one (F := F)⟩
+      μ𝔽 _ _ _ (hStrip(ha)) hs).exists.choose) A
+  change (∃ K, sobolevProjectiveKernelOperator (F := F) ha hs K = A) ↔ IsNuclearOperator A at h
+  refine ⟨fun hu ↦ h.mp hu.exists, fun hn ↦ ?_⟩
+  obtain ⟨K, hK⟩ := h.mpr hn
+  exact ⟨K, hK, fun L hL ↦ sobolevProjectiveKernelOperator_injective ha hs (hL.trans hK.symm)⟩
+
+/-- Every admissible finite cutoff in Definition 10.4.1.5, p. 458, has a unique
+reciprocal-weight projective kernel for convolution after the spectral projection. -/
+theorem spectralRestriction_existsUnique_projectiveKernel (a : ℝ) {α s : ℝ}
+    (ha : 0 ≤ α) (hs : 0 ≤ s) (φ : BruhatCompactSupport C𝔽) {R ε : ℝ} {ρ : C𝔽 → ℝ}
+    (hρ : IsModulatedCutoff m𝔽 R ε ρ) (hband : 0 < R⁻¹+ε ∧ R⁻¹+ε < R-ε) :
+    ∃! K, sobolevProjectiveKernelOperator (F := F) ha hs K = spectralRestriction a ha hs hρ φ :=
+  (existsUnique_sobolevProjectiveKernel_iff_nuclear ha hs _).mpr
+    (spectralRestriction_nuclear a ha hs hρ hband φ)
+
+private theorem cutoffKernel_tensor_finite_range {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
+    (z : StrongDual ℂ H ⊗[ℂ] H) :
+    FiniteDimensional ℂ (tensorToFiniteRank z).toLinearMap.range := by
+  induction z using TensorProduct.inductionOn with
+  | tmul φ y =>
+    have := FiniteDimensional.span_of_finite ℂ (Set.finite_singleton y)
+    apply Submodule.finiteDimensional_of_le (S₂ := ℂ ∙ y)
+    rintro _ ⟨x, rfl⟩
+    exact Submodule.mem_span_singleton.mpr ⟨φ x, (tensorToFiniteRank_tmul φ y x).symm⟩
+  | add z w hz hw =>
+    rw [map_add, ContinuousLinearMap.toLinearMap_add]
+    exact Submodule.finiteDimensional_of_le (LinearMap.range_add_le _ _)
+
+private theorem cutoffKernel_traceNorm_null
+    (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℂ H] [CompleteSpace H]
+    (Q : ℝ → H →L[ℂ] H) (hQ : ∀ x, Tendsto (fun R ↦ Q R x) atTop (𝓝 0))
+    (hbound : ∀ R, ‖Q R‖ ≤ 2) (T : nuclearEndomorphisms H) :
+    Tendsto (fun R ↦ traceNorm ⟨Q R * T.val, mul_mem_nuclearEndomorphisms_left (Q R) T⟩) atTop (𝓝 0) := by
+  let product (R : ℝ) (A : nuclearEndomorphisms H) : nuclearEndomorphisms H :=
+    ⟨Q R * A.val, mul_mem_nuclearEndomorphisms_left (Q R) A⟩
+  let : Norm (nuclearEndomorphisms H) := ⟨traceNorm⟩
+  have hcore := (traceNorm_normedSpaceCore (H := H)).toCore
+  have hnonneg (A : nuclearEndomorphisms H) : 0 ≤ traceNorm A := hcore.norm_nonneg A
+  refine Metric.tendsto_nhds.mpr fun ε hε ↦ ?_
+  obtain ⟨z, hz⟩ := exists_tensorToFiniteRank_traceNorm_sub_lt T (by positivity : 0 < ε / 4)
+  let F : nuclearEndomorphisms H :=
+    ⟨tensorToFiniteRank z, tensorToFiniteRank_mem_nuclearEndomorphisms z⟩
+  obtain ⟨_, hF⟩ := tendsto_traceNorm_mul_finiteRank Q hQ F.val (cutoffKernel_tensor_finite_range z)
+  have hF' : Tendsto (fun R ↦ traceNorm (product R F)) atTop (𝓝 0) := hF
+  filter_upwards [Metric.tendsto_nhds.mp hF' (ε / 2) (half_pos hε)] with R hR
+  have hsplit : product R T = product R (T - F) + product R F := by
+    apply Subtype.ext
+    simp [product, mul_sub]
+  have hle : traceNorm (product R (T - F)) ≤ 2 * traceNorm (T - F) :=
+    (traceNorm_mul_left_le (Q R) (T - F)).trans
+      (mul_le_mul_of_nonneg_right (hbound R) (hnonneg (T - F)))
+  have htriangle : traceNorm (product R T) ≤
+      traceNorm (product R (T - F)) + traceNorm (product R F) := by
+    rw [hsplit]
+    exact hcore.norm_triangle _ _
+  rw [Real.dist_eq, sub_zero, abs_of_nonneg (hnonneg (product R F))] at hR
+  rw [Real.dist_eq, sub_zero, abs_of_nonneg (hnonneg (product R T))]
+  change traceNorm (T - F) < ε / 4 at hz
+  linarith
+
+private theorem cutoffKernel_contraction_limit {H : Type*}
+    [NormedAddCommGroup H] [InnerProductSpace ℂ H] [CompleteSpace H]
+    (P : ℝ → H →L[ℂ] H) (hP : ∀ R, ‖P R‖ ≤ 1)
+    (hlim : ∀ x, Tendsto (fun R ↦ P R x) atTop (𝓝 x)) (T : nuclearEndomorphisms H) :
+    let D (R : ℝ) : nuclearEndomorphisms H := ⟨P R * T.val, mul_mem_nuclearEndomorphisms_left (P R) T⟩
+    Tendsto (fun R ↦ traceNorm (D R - T)) atTop (𝓝 0) ∧
+      Tendsto (fun R ↦ hilbertTrace (D R)) atTop (𝓝 (hilbertTrace T)) := by
+  intro D
+  have hnorm : Tendsto (fun R ↦ traceNorm (D R - T)) atTop (𝓝 0) := by
+    let Q (R : ℝ) := P R - 1
+    have hq (x : H) : Tendsto (fun R ↦ Q R x) atTop (𝓝 0) := by
+      simpa [Q] using (hlim x).sub (tendsto_const_nhds (x := x))
+    have hb (R : ℝ) : ‖Q R‖ ≤ 2 := (norm_sub_le _ _).trans (by
+      linarith [hP R, show ‖(1 : H →L[ℂ] H)‖ ≤ 1 from ContinuousLinearMap.norm_id_le])
+    have hdiff (R : ℝ) : D R - T = ⟨Q R * T.val, mul_mem_nuclearEndomorphisms_left (Q R) T⟩ := by
+      apply Subtype.ext
+      change P R * T.val - T.val = (P R - 1) * T.val
+      rw [sub_mul, one_mul]
+    simp_rw [hdiff]
+    exact cutoffKernel_traceNorm_null _ Q hq hb T
+  refine ⟨hnorm, ?_⟩
+  obtain ⟨L, hL⟩ := hilbertTrace_linear (H := H)
+  have he (R : ℝ) : hilbertTrace (D R) - hilbertTrace T = hilbertTrace (D R - T) := by
+    rw [← hL, ← hL, ← hL, map_sub]
+  apply tendsto_iff_norm_sub_tendsto_zero.mpr
+  change Tendsto (fun R ↦ ‖hilbertTrace (D R) - hilbertTrace T‖) atTop (𝓝 0)
+  simp_rw [he]
+  exact squeeze_zero (fun _ ↦ norm_nonneg _) (fun R ↦ norm_hilbertTrace_le (D R - T)) hnorm
+
+/-- If the untruncated kernel in (12.5.1.4), p. 520, exists, every expanding
+admissible family of the actual finite restrictions converges in trace norm.
+Their Hilbert traces converge to the trace of convolution after projection. -/
+theorem spectralRestriction_traceNorm_tendsto_of_projectiveKernel (a : ℝ) {α s : ℝ}
+    (ha : 0 ≤ α) (hs : 0 ≤ s) (φ : BruhatCompactSupport C𝔽)
+    (hK : ∃ K, sobolevProjectiveKernelOperator (F := F) ha hs K = ((A(ha, hs, φ)).comp (Pspec(a, ha, hs))))
+    (ε : ℝ → ℝ) (ρ : ℝ → C𝔽 → ℝ) (hε : Tendsto (fun R ↦ ε R * R) atTop (𝓝 0))
+    (hρ : ∀ᶠ R in atTop, IsModulatedCutoff m𝔽 R (ε R) (ρ R) ∧
+      0 < R⁻¹+ε R ∧ R⁻¹+ε R < R-ε R) :
+    ∃ (T : nuclearEndomorphisms (W(α, s))) (D : ℝ → nuclearEndomorphisms (W(α, s))),
+      T.val = ((A(ha, hs, φ)).comp (Pspec(a, ha, hs))) ∧
+      (∀ R (hc : IsModulatedCutoff m𝔽 R (ε R) (ρ R)), (D R).val = spectralRestriction a ha hs hc φ) ∧
+      Tendsto (fun R ↦ traceNorm (D R - T)) atTop (𝓝 0) ∧
+      Tendsto (fun R ↦ hilbertTrace (D R)) atTop (𝓝 (hilbertTrace T)) := by
+  obtain ⟨K, hk⟩ := hK
+  have hn := (existsUnique_sobolevProjectiveKernel_iff_nuclear ha hs _).mp
+    ⟨K, hk, fun L hL ↦ sobolevProjectiveKernelOperator_injective ha hs (hL.trans hk.symm)⟩
+  let T : nuclearEndomorphisms (W(α, s)) := ⟨_, hn⟩
+  have hfamily : ∃ P : ℝ → W(α,s) →L[ℂ] W(α,s),
+      (∀ R, ‖P R‖ ≤ 1) ∧ (∀ u, Tendsto (fun R ↦ P R u) atTop (𝓝 u)) ∧
+      ∀ R (hc : IsModulatedCutoff m𝔽 R (ε R) (ρ R)), P R = modulatedCutoffOperator m𝔽
+        ((μ𝔽).withDensity fun g ↦ ENNReal.ofReal (intervalSobolevDensity (-α) α s (logNorm g))) hc := by
+    with_unfolding_all
+      exact exists_stronglyConvergent_modulatedCutoffOperators C𝔽 m𝔽
+        ((μ𝔽).withDensity fun g ↦ ENNReal.ofReal (intervalSobolevDensity (-α) α s (logNorm g))) ε ρ hε hρ
+  obtain ⟨P, hP, hlim, hcut⟩ := hfamily
+  let D (R : ℝ) : nuclearEndomorphisms (W(α, s)) := ⟨P R * T.val, mul_mem_nuclearEndomorphisms_left (P R) T⟩
+  have h := cutoffKernel_contraction_limit P hP hlim T
+  refine ⟨T, D, rfl, fun R hc ↦ ?_, h.1, h.2⟩
+  change P R * T.val = _
+  rw [hcut R hc]
+  rfl
+
 section FiniteTensors
 
 variable {Z J E G : Type*}

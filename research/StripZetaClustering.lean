@@ -180,7 +180,8 @@ private theorem trailingCoeff_eq_taylorCoeff {f : ℂ → ℂ} {w : ℂ}
     simp [hpow, hj]
   · simp
 
-private theorem zetaOrder_finite {z : ℂ} (hz : z ≠ 1) : analyticOrderAt riemannZeta z ≠ ⊤ := by
+/-- Away from its pole, ordinary zeta has finite analytic order. -/
+theorem zetaOrder_finite {z : ℂ} (hz : z ≠ 1) : analyticOrderAt riemannZeta z ≠ ⊤ := by
   apply analyticOn_riemannZeta.analyticOrderAt_ne_top_of_isPreconnected (x := 2)
     (isConnected_compl_singleton_of_one_lt_rank (by simp) 1).isPreconnected (by simp) hz
   rw [(analyticOn_riemannZeta 2 (by norm_num)).analyticOrderAt_eq_zero.mpr
