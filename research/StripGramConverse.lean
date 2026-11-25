@@ -1,6 +1,6 @@
 import research.StripInteriorMellin
 import research.StripSimpleGram
-import research.StripZetaClustering
+import research.StripZetaMean
 
 /-!
 # Finite Gram obstructions from nearby zeros
@@ -109,6 +109,25 @@ theorem zetaClusterCost_le_log_of_cardinal {ρ : ℂ} {g : ℂ → ℂ} {M : ℝ
         by_cases he : g z = 0
         · simpa [he] using Real.log_nonneg hM
         exact Real.log_le_log (norm_pos_iff.mpr he) (hbound z hz)
+
+/-- Each neighboring zero forces a reciprocal distance to the power of its
+full multiplicity. All these obstructions hold on the same finite block. -/
+theorem zetaNeighbor_power_le_exp_cluster {ρ z : ℂ} (hz : z ∈ zetaNeighbors ρ) :
+    (1 / (4 * dist z ρ)) ^ analyticOrderNatAt riemannZeta z ≤
+      Real.exp (zetaClusterCost ρ (1/4)) := by
+  obtain ⟨hne,hd,_⟩ := mem_zetaNeighbors_iff.mp hz
+  have hp := dist_pos.mpr hne
+  let r := (1/4 : ℝ) / dist z ρ
+  have hr : 0 < r := div_pos (by norm_num) hp
+  have hlog : 0 ≤ Real.log r := Real.log_nonneg ((one_le_div hp).mpr hd)
+  have h : (analyticOrderNatAt riemannZeta z : ℝ) * Real.log r ≤ zetaClusterCost ρ (1/4) := by
+    have ht := Finset.single_le_sum (s := zetaNeighbors ρ)
+      (f := fun v ↦ (analyticOrderNatAt riemannZeta v : ℝ) * max 0 (Real.log ((1/4) / dist v ρ)))
+      (fun v _ ↦ mul_nonneg (Nat.cast_nonneg _) (le_max_left ..)) hz
+    simpa only [zetaClusterCost,r,max_eq_right hlog] using ht
+  have he := Real.exp_le_exp.mpr h
+  rw [Real.exp_nat_mul,Real.exp_log hr] at he
+  simpa only [r,div_div] using he
 
 attribute [local instance] instIdeleClassMeasurableSpaceSec1 instIdeleClassBorelSpaceSec1
   instIdeleClassT2Sec1 instIdeleClassLocallyCompactSec1 instIdeleClassSecondCountableSec1
@@ -394,5 +413,39 @@ theorem rational_zeroth_gram_requires_coefficients {s B : ℝ} (hs : 0 ≤ s)
   change 1/T^(N+(p+1)) ≤ coeff
   rw [pow_add,← div_div]
   exact (div_le_iff₀ (pow_pos hTp _)).mpr (hx.trans_eq (mul_comm ..))
+
+/-- On the rational trivial component the polynomial Gram criterion for all
+retained jets is equivalent to the arithmetic leading-coefficient criterion,
+using the unconditional lower bound for the quarter-circle mean. -/
+theorem rational_polynomial_gram_iff_coefficients {s : ℝ} (hs : 0 ≤ s)
+    (χ : PontryaginDual C₁ → PontryaginDual Cℚ) (hχ : IsSpectralBasepointChoice χ)
+    (hχ1 : χ 1 = 1) :
+    (∃ (K : ℝ) (p : ℕ), 0 < K ∧ ∀ i : J(χ,s), i.val.1 = 1 → ∀ S : Finset (J(χ,s)),
+      let u (j : J(χ,s)) := (spectralStripJet_memLp χ (by norm_num : (0:ℝ) ≤ 1) hs j).toLp (jet(χ,j))
+      ‖u i‖ * finiteGramCoordinate u i S ≤ K * (10+|i.val.2.2.1|)^p) ↔
+    ∃ (A : ℕ) (b : ℝ), 0 < b ∧ ∀ w : ℂ, 1 ≤ |w.im| → riemannZeta w = 0 → ∀ n : ℕ,
+      analyticOrderAt riemannZeta w = n → b / (2+|w.im|)^A ≤ ‖taylorCoeff riemannZeta w n‖ := by
+  obtain ⟨B,hmean⟩ := zeta_quarterCircle_mean_lower
+  constructor
+  · rintro ⟨K,p,hK,hrows⟩
+    refine rational_zeroth_gram_requires_coefficients hs hmean χ hχ hχ1 hK p (fun i hi _ _ S ↦ ?_)
+    have him : (point(i)).im = i.val.2.2.1 := by simp
+    simpa only [him] using hrows i hi S
+  · rintro ⟨A,b,hb,hcoeff⟩
+    obtain ⟨K,hK,hrows⟩ := rational_finiteGram_polynomial hb A hcoeff hs χ hχ hχ1
+    exact ⟨K,6*A+30,hK,hrows⟩
+
+/-- Unconditional two-sided control of the worst finite Gram coordinate at
+every high simple zero by the reciprocal derivative, up to a power of height. -/
+theorem rational_simple_gram_two_sided_unconditional {s : ℝ} (hs : 0 ≤ s) :
+    ∃ B c C : ℝ, 0 < c ∧ 0 ≤ C ∧ ∀ (χ : PontryaginDual C₁ → PontryaginDual Cℚ),
+      IsSpectralBasepointChoice χ → χ 1 = 1 → ∀ i : J(χ,s),
+      i.val.1 = 1 → 2 ≤ |i.val.2.2.1| → analyticOrderAt riemannZeta (point(i)) = 1 →
+      let u (j : J(χ,s)) := (spectralStripJet_memLp χ (by norm_num : (0:ℝ) ≤ 1) hs j).toLp (jet(χ,j))
+      let Q (S : Finset (J(χ,s))) := ‖u i‖ * finiteGramCoordinate u i S
+      (∃ S : Finset (J(χ,s)), i ∈ S ∧ c*(2+|i.val.2.2.1|)^(-B) ≤ Q S * ‖deriv riemannZeta (point(i))‖) ∧
+        ∀ S, Q S ≤ C*(10+|i.val.2.2.1|)^4 / ‖deriv riemannZeta (point(i))‖ := by
+  obtain ⟨B,hmean⟩ := zeta_quarterCircle_mean_lower
+  exact ⟨B,rational_simple_gram_two_sided hs hmean⟩
 
 end MasulloResearch.StripRadial

@@ -53,7 +53,7 @@ For some fixed $A>0$, the simple zeros satisfying
 $$
 |\zeta'(\rho)|\ge (2+|\Im\rho|)^{-A}
 $$
-have lower limiting proportion at least $13/20$ among all positive-height nontrivial zeros counted with multiplicity. This follows from Lamzouri's unconditional isolation theorem, Titchmarsh's local product formula, and the Riemann–von Mangoldt count. The finite packing and derivative estimates in the deduction are proved in Lean. The asymptotic theorems are inputs from the literature. [Lamzouri, Theorem 1.1, the small-$c$ isolation bound](https://arxiv.org/abs/2610.26841) · [Titchmarsh, Chapter IX](https://sites.math.rutgers.edu/~zeilberg/EM18/TitchmarshZeta.pdf) · [Finite packing and derivative estimates](StripZetaIsolated.lean)
+have lower limiting proportion at least $13/20$ among all positive-height nontrivial zeros counted with multiplicity. This follows from Lamzouri's unconditional isolation theorem, Titchmarsh's local product formula, and the Riemann–von Mangoldt count. The finite packing, quarter-circle mean and derivative estimates in the deduction are proved in Lean. The asymptotic isolation and zero-count theorems are inputs from the literature. [Lamzouri, Theorem 1.1, the small-$c$ isolation bound](https://arxiv.org/abs/2610.26841) · [Titchmarsh, Chapter IX](https://sites.math.rutgers.edu/~zeilberg/EM18/TitchmarshZeta.pdf) · [Finite packing and derivative estimates](StripZetaIsolated.lean)
 
 Put $R=1/4$. Let $S$ be a finite set of zeros such that every center's ordinate differs from the ordinate of every other zero site by at least $\delta>0$. Write $Z$ for the set of zeros in the closed quarter-disks around these centers, with each center omitted from its own disk. Then
 $$
@@ -79,7 +79,7 @@ H_\rho(v)=\frac{F_\rho(v)}{v F_\rho'(0)},\qquad H_\rho(0)=1 .
 $$
 All other zeros retain their full orders. On the lines used for Mellin inversion, $|v|\ge1$. The established envelope for $F_\rho$ costs a fifth power of height. Since $F_\rho'(0)=(\rho-1)\zeta'(\rho)$ and $10+|\Im\rho|\le6|\rho-1|$ at these heights, the physical witness costs only a fourth power times $1/|\zeta'(\rho)|$.
 
-Two finite-sum estimates follow in Lean. First, the Mellin-weighted sum in (10.3.2.7) stays uniformly bounded when each simple high row is weighted by $|\zeta'(\rho)|$, across all such rows. Second, the original row weights suffice on the subfamily where $|\zeta'(\rho)|\ge b(2+|\Im\rho|)^{-A}$. The second result and the density argument above give the original bound restricted to a set of lower limiting proportion at least $13/20$ among the positive-height nontrivial zeros. Both sums are uniform in the finite selection, the circle samples and the entire ambient Gram block. The pointwise and finite-sum implications are formalized. The density input uses the external results cited above. The unrestricted sum with the manuscript's weights remains open. [Finite-sum theorems](StripSimpleGram.lean)
+Two finite-sum estimates follow in Lean. First, the Mellin-weighted sum in (10.3.2.7) stays uniformly bounded when each simple high row is weighted by $|\zeta'(\rho)|$, across all such rows. Second, the original row weights suffice on the subfamily where $|\zeta'(\rho)|\ge b(2+|\Im\rho|)^{-A}$. The second result and the density argument above give the original bound restricted to a set of lower limiting proportion at least $13/20$ among the positive-height nontrivial zeros. Both sums are uniform in the finite selection, the circle samples and the entire ambient Gram block. The pointwise and finite-sum implications are formalized. The density deduction uses the external isolation and zero-count theorems cited above. The unrestricted sum with the manuscript's weights remains open. [Finite-sum theorems](StripSimpleGram.lean)
 
 ## A necessary lower bound on one finite Gram block
 
@@ -87,13 +87,13 @@ Keep the same rational component and fix $s\ge0$. At any nontrivial zero $\rho$ 
 $$
 e^{J_\rho}\le C_s Q_\rho(S_\rho).
 $$
-One finite block thus detects the combined effect of all the neighboring zeros, with their full multiplicities. The inverse Gram column gives a vector $q$ of norm exactly equal to the Gram coordinate. Pairing $q$ with the exponential jet at a variable point gives a holomorphic function which is one at $\rho$ and vanishes to the required orders at the neighbors. Its modulus on the quarter-circle is bounded by a constant times $\|q\|$. Jensen's formula gives the displayed inequality. [Finite-block lower bound](StripGramConverse.lean) · [Mellin pairing and contour estimates](StripInteriorMellin.lean)
+In particular, a single neighbor of multiplicity $n$ at distance $d\le1/4$ forces $Q_\rho(S_\rho)\ge (4d)^{-n}/C_s$. The same block detects the combined effect of all the neighboring zeros. The inverse Gram column gives a vector $q$ of norm exactly equal to the Gram coordinate. Pairing $q$ with the exponential jet at a variable point gives a holomorphic function which is one at $\rho$ and vanishes to the required orders at the neighbors. Its modulus on the quarter-circle is bounded by a constant times $\|q\|$. Jensen's formula gives the displayed inequality. [Finite-block lower bound](StripGramConverse.lean) · [Mellin pairing and contour estimates](StripInteriorMellin.lean)
 
 Write $a_\rho=\zeta^{(m_\rho)}(\rho)/m_\rho!$. The exact Jensen identity gives $e^{J_\rho}|a_\rho|=4^{m_\rho}\exp(\operatorname{avg}_{|z-\rho|=1/4}\log|\zeta(z)|)$. If the circle mean is at least $-B\log T_\rho$, the same block satisfies
 $$
 4^{m_\rho} T_\rho^{-B} \le C_s Q_\rho(S_\rho)|a_\rho|.
 $$
-At a simple zero this is the reciprocal-derivative lower bound. Together with the upper bound on every block, it pins down the worst finite-block coordinate up to a power of height. For general multiplicity, even a uniform polynomial bound for just the zeroth rows forces (1). The existing interpolation theorem then bounds all retained derivative orders. These implications are formalized with the quarter-circle mean stated explicitly. The classical fixed-window local product estimate above supplies that mean on paper. Proving (1) uniformly at exceptional clusters remains open. [Coefficient converse and simple-zero two-sided estimate](StripGramConverse.lean)
+At a simple zero this is the reciprocal-derivative lower bound. Together with the upper bound on every block, it pins down the worst finite-block coordinate up to a power of height. For general multiplicity, even a uniform polynomial bound for just the zeroth rows forces (1). The existing interpolation theorem then bounds all retained derivative orders. The fork now proves the quarter-circle mean and the equivalence between polynomial Gram growth and (1) in Lean. For the mean bound, transfer the logarithmic deficit over the small disk to an enclosing disk about $2+i\Im\rho$, where the Dirichlet series gives a lower bound for the anchor value. [Quarter-circle mean](StripZetaMean.lean) · [Disk-average inequality](CircleMeanTransfer.lean) Proving (1) uniformly at exceptional clusters remains open. [Coefficient converse and simple-zero two-sided estimate](StripGramConverse.lean)
 
 ## Uniform reduction to a shrinking disk
 
@@ -179,10 +179,10 @@ For simple zeros, (1) becomes a polynomial lower bound for $|\zeta'(\rho)|$. In 
 From the root of the fork, build the imported project modules and check the research files in dependency order.
 
 ```sh
-lake build $(awk '($1 == "import" || ($1 == "public" && $2 == "import")) && $NF ~ /^(Mathlib|RiemannMasullo)[.]/ {print $NF}' research/Strip*.lean | sort -u)
+lake build $(awk '($1 == "import" || ($1 == "public" && $2 == "import")) && $NF ~ /^(Mathlib|RiemannMasullo)[.]/ {print $NF}' research/CircleMeanTransfer.lean research/Strip*.lean | sort -u)
 research_out=.lake/build/lib/lean/research
 mkdir -p "$research_out"
-for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated StripSimpleGram StripInteriorMellin StripGramConverse
+for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated StripSimpleGram StripInteriorMellin CircleMeanTransfer StripZetaMean StripGramConverse
 do
   lake env lean -DmaxSynthPendingDepth=3 -DautoImplicit=false -DrelaxedAutoImplicit=false -DwarningAsError=true -o "$research_out/$name.olean" "research/$name.lean" || exit 1
 done
@@ -190,4 +190,4 @@ done
 
 The fourth-order block estimate adapts Thomas Lince’s corrected trapezoid proof. [Project attribution](../RiemannMasullo/External/ATTRIBUTION.md)
 
-Prepared with Codex assistance.
+The disk-average transfer and the unconditional zeta mean were formalized by Claude Fable. The finite Gram converse was formalized by Codex.
