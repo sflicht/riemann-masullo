@@ -45,7 +45,36 @@ $$
 = -J_\rho+O(\log T_\rho).
 $$
 
-The standard estimates apply at large height; conjugation and the finitely many remaining zeros give the assertion for all $\rho$. [Titchmarsh, *The Theory of the Riemann Zeta-function*, Theorem 9.6(B)](https://sites.math.rutgers.edu/~zeilberg/EM18/TitchmarshZeta.pdf) · [Montgomery–Vaughan, Chapter 16, local formula](https://personal.science.psu.edu/rcv4/personal/Publications/MNTI/16.0_pp_397_418_Explicit_formulae.pdf)
+The standard estimates apply at large height; conjugation and the finitely many remaining zeros give the assertion for all $\rho$. [Titchmarsh, *The Theory of the Riemann Zeta-function*, Theorem 9.6(B)](https://sites.math.rutgers.edu/~zeilberg/EM18/TitchmarshZeta.pdf) · [Montgomery–Vaughan, local formula](https://personal.science.psu.edu/rcv4/personal/Publications/MNTI/16.0_pp_397_418_Explicit_formulae.pdf)
+
+## Bounds for isolated zeros
+
+For some fixed $A>0$, the simple zeros satisfying
+$$
+|\zeta'(\rho)|\ge (2+|\Im\rho|)^{-A}
+$$
+have lower limiting proportion at least $13/20$ among all positive-height nontrivial zeros counted with multiplicity. This follows from Lamzouri's unconditional isolation theorem, Titchmarsh's local product formula, and the Riemann–von Mangoldt count. The finite packing and derivative estimates in the deduction are proved in Lean. The asymptotic theorems are inputs from the literature. [Lamzouri, Theorem 1.1, especially (1.5)](https://arxiv.org/abs/2610.26841) · [Titchmarsh, Chapter IX](https://sites.math.rutgers.edu/~zeilberg/EM18/TitchmarshZeta.pdf) · [Finite packing and derivative estimates](StripZetaIsolated.lean)
+
+Put $R=1/4$. Let $S$ be a finite set of zeros such that every center's ordinate differs from the ordinate of every other zero site by at least $\delta>0$. Write $Z$ for the set of zeros in the closed quarter-disks around these centers, with each center omitted from its own disk. Then
+$$
+\sum_{\rho\in S} J_\rho
+\le \frac{2R}{\delta}\sum_{\nu\in Z} m_\nu .
+$$
+
+Fix a source zero $\nu$ and look at the centers to which it contributes. Within distance $r$ there are at most $r/\delta$ on either side of its ordinate. The first is at least $\delta$ away and the rest have successive gaps at least $\delta$. Complex distance dominates ordinate distance, so the bound also covers off-line sources. Integrating $2r/\delta$ against $dr/r$ up to $R$ gives a total charge of at most $2R/\delta$ per unit of source multiplicity. Interchanging the finite sums proves the inequality.
+
+For the density deduction, choose $c>0$ so that Lamzouri's lower limiting isolated proportion is $p>13/20$. Take his isolated ordinates between $\sqrt X$ and $X$, with $\delta=2\pi c/\log X$. These zeros are simple, and deleting the lower ordinates costs $o(N(X))$. Their source multiplicity is at most $N(X+1)\sim N(X)$. For fixed $K>0$, at most $(1+o(1))N(X)/(4\pi cK)$ centers can have $J_\rho>K\log X$. Choose $K$ so that $1/(4\pi cK)<p-13/20$. By the local product estimate above, all the remaining centers satisfy $\log|\zeta'(\rho)|\ge -(K+D)\log X$ for a fixed $D>0$. Since $\Im\rho\ge\sqrt X$, one exponent $A=2(K+D)$ works in terms of the zero's own height. The conclusion concerns the coefficient on this subfamily. The finite Gram estimate in #7455 still requires control across the full component.
+
+## Uniform reduction to a shrinking disk
+
+For $L=\log(2+|\Im\rho|)\ge2$, put $r_0=L^{-2}$ and define $J_\rho(r)=\sum_{0<|\nu-\rho|<r}m_\nu\log(r/|\nu-\rho|)$. Suppose the multiplicity count of other zeros inside distance $r$ is at most $C(rL+L/\log L)$ for $r_0\le r\le1/4$. Integrating over these radii gives
+$$
+J_\rho(1/4)\le J_\rho(r_0)+(9/4)CL .
+$$
+
+The count follows under RH from the Riemann–von Mangoldt formula and the bound for $S(t)$. The mean of $\log|\zeta|$ on the quarter-circle is at least $-BL$ unconditionally by the fixed-window form of Titchmarsh 9.6(B). In that formula one can take all zeros with $|\Im\nu-\Im\rho|\le 2$, since changing the height window only changes $O(L)$ bounded logarithms. The circle mean of each $\log|z-\nu|$ is at least $-\log 4$, including when $\nu$ lies on the circle. [Carneiro–Chandee–Milinovich, Theorem 1](https://arxiv.org/abs/1309.1526) · [Lean reduction](StripZetaClustering.lean)
+
+The Lean proof uses Jensen's exact identity at the center with its full multiplicity. If $J_\rho(r_0)\le EL$, it yields $\log|a_\rho|\ge-(B+9C/4+E)L$. In particular, if at most $M$ units of neighboring multiplicity occur in the tiny disk and each neighbor is at distance at least $T^{-K}$, one can take $E=MK$, with $T=2+|\Im\rho|$. An empty tiny disk gives $E=0$. If this cost bound holds at all sufficiently high zeros, finite compactness absorbs the lower heights and supplies exactly the coefficient hypothesis of the rational Gram theorem. The uniform tiny-cost bound is open.
 
 ## Sufficiency: interpolants for all derivative orders
 
@@ -123,7 +152,7 @@ From the root of the fork, build the imported project modules and check the rese
 lake build $(awk '$1 == "import" && $2 !~ /^research[.]/ {print $2}' research/Strip*.lean | sort -u)
 research_out=.lake/build/lib/lean/research
 mkdir -p "$research_out"
-for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace
+for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated
 do
   lake env lean -DmaxSynthPendingDepth=3 -DautoImplicit=false -DrelaxedAutoImplicit=false -DwarningAsError=true -o "$research_out/$name.olean" "research/$name.lean" || exit 1
 done
