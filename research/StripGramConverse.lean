@@ -145,9 +145,10 @@ local notation "ν(" s ")" => intervalSobolevMeasure (ideleClassTamagawaMeasure 
 
 /-- A finite block containing the center and all jets of every other ordinary
 zero in the closed quarter-disk. Interior sites retain their full order. -/
-theorem exists_rational_neighbor_block {χ : PontryaginDual C₁ → PontryaginDual Cℚ}
+theorem exists_rational_neighbor_block_supported {χ : PontryaginDual C₁ → PontryaginDual Cℚ}
     (hχ1 : χ 1 = 1) {s : ℝ} (i : J(χ,s)) (ht : 2 ≤ |(point(i)).im|) :
-    ∃ S : Finset (J(χ,s)), i ∈ S ∧ ∀ z ∈ zetaNeighbors (point(i)), ∀ k < analyticOrderNatAt riemannZeta z,
+    ∃ S : Finset (J(χ,s)), i ∈ S ∧
+      (∀ j ∈ S, j ≠ i → point(j) ∈ zetaNeighbors (point(i))) ∧ ∀ z ∈ zetaNeighbors (point(i)), ∀ k < analyticOrderNatAt riemannZeta z,
       ∃ j ∈ S, j.val.1 = 1 ∧ point(j) = z ∧ j.val.2.2.2 = k := by
   let Z := zetaNeighbors (point(i))
   have hj (z : Z) (k : Fin (analyticOrderNatAt riemannZeta z.val)) :
@@ -173,11 +174,26 @@ theorem exists_rational_neighbor_block {χ : PontryaginDual C₁ → PontryaginD
       exact k.isLt.trans_le hm.ge⟩, rfl,hpoint,rfl⟩
   let j (z : Z) (k : Fin (analyticOrderNatAt riemannZeta z.val)) := (hj z k).choose
   let S := insert i (Z.attach.biUnion fun z ↦ Finset.univ.image (j z))
-  refine ⟨S,Finset.mem_insert_self ..,fun z hz k hk ↦ ?_⟩
+  have hsupport (v) (hv : v ∈ S) (hvi : v ≠ i) : point(v) ∈ zetaNeighbors (point(i)) := by
+    have hv' := (Finset.mem_insert.mp hv).resolve_left hvi
+    obtain ⟨z,_,hz⟩ := Finset.mem_biUnion.mp hv'
+    obtain ⟨k,_,rfl⟩ := Finset.mem_image.mp hz
+    rw [(hj z k).choose_spec.2.1]
+    exact z.property
+  refine ⟨S,Finset.mem_insert_self ..,hsupport,fun z hz k hk ↦ ?_⟩
   let zz : Z := ⟨z,hz⟩
   let kk : Fin (analyticOrderNatAt riemannZeta zz.val) := ⟨k,hk⟩
   exact ⟨j zz kk,Finset.mem_insert_of_mem (Finset.mem_biUnion.mpr
     ⟨zz,Finset.mem_attach ..,Finset.mem_image.mpr ⟨kk,Finset.mem_univ _,rfl⟩⟩),(hj zz kk).choose_spec⟩
+
+/-- A finite block containing the center and all jets of every other ordinary
+zero in the closed quarter-disk. Interior sites retain their full order. -/
+theorem exists_rational_neighbor_block {χ : PontryaginDual C₁ → PontryaginDual Cℚ}
+    (hχ1 : χ 1 = 1) {s : ℝ} (i : J(χ,s)) (ht : 2 ≤ |(point(i)).im|) :
+    ∃ S : Finset (J(χ,s)), i ∈ S ∧ ∀ z ∈ zetaNeighbors (point(i)), ∀ k < analyticOrderNatAt riemannZeta z,
+      ∃ j ∈ S, j.val.1 = 1 ∧ point(j) = z ∧ j.val.2.2.2 = k := by
+  obtain ⟨S,hi,_,hj⟩ := exists_rational_neighbor_block_supported hχ1 i ht
+  exact ⟨S,hi,hj⟩
 
 private theorem expJet_at_rational_index {s : ℝ} (hs : 0 ≤ s)
     {χ : PontryaginDual C₁ → PontryaginDual Cℚ} (hχ1 : χ 1 = 1)
@@ -242,11 +258,12 @@ private theorem finite_rational_cardinal_cost {s : ℝ} (hs : 0 ≤ s)
 /-- On the rational trivial character, the logarithmic neighbour cost of any
 high zero is bounded by a single actual finite Gram coordinate of its zeroth
 jet. The constant is uniform in height, the center, and the basepoint choice. -/
-theorem rational_zeroth_gram_cluster_lower {s : ℝ} (hs : 0 ≤ s) :
+theorem rational_zeroth_gram_cluster_lower_supported {s : ℝ} (hs : 0 ≤ s) :
     ∃ C : ℝ, 0 < C ∧ ∀ (χ : PontryaginDual C₁ → PontryaginDual Cℚ),
       IsSpectralBasepointChoice χ → χ 1 = 1 → ∀ i : J(χ,s),
       i.val.1 = 1 → i.val.2.2.2 = 0 → 2 ≤ |(point(i)).im| →
       ∃ S : Finset (J(χ,s)), i ∈ S ∧
+        (∀ j ∈ S, j ≠ i → point(j) ∈ zetaNeighbors (point(i))) ∧
         let u (j : J(χ,s)) := (spectralStripJet_memLp χ (by norm_num : (0:ℝ) ≤ 1) hs j).toLp (jet(χ,j))
         Real.exp (zetaClusterCost (point(i)) (1/4)) ≤
           C * (‖u i‖ * finiteGramCoordinate u i S) := by
@@ -257,7 +274,7 @@ theorem rational_zeroth_gram_cluster_lower {s : ℝ} (hs : 0 ≤ s) :
   obtain ⟨d,hd,hlower⟩ := expJet_uniform_lower ℓ hx (reciprocal_strip_measure_ne_zero (F := ℚ) s) hLp
   refine ⟨D/d,div_pos hD hd,fun χ hχ hχ1 i hi hk ht ↦ ?_⟩
   let u (j : J(χ,s)) := (spectralStripJet_memLp χ (by norm_num : (0:ℝ) ≤ 1) hs j).toLp (jet(χ,j))
-  obtain ⟨S,hiS,hother⟩ := exists_rational_neighbor_block hχ1 i ht
+  obtain ⟨S,hiS,hsupp,hother⟩ := exists_rational_neighbor_block_supported hχ1 i ht
   have hInd := spectralStripJet_toLp_linearIndependent χ hχ (1/2) (by norm_num : (0:ℝ) ≤ 1) hs
   obtain ⟨q,hq,hcard⟩ := exists_finiteGram_cardinal u S hiS (hInd.comp _ Subtype.val_injective)
   have he := finite_rational_cardinal_cost hs hχ1 i hi hk S hiS hother q hupper (fun j hj ↦ by
@@ -272,12 +289,28 @@ theorem rational_zeroth_gram_cluster_lower {s : ℝ} (hs : 0 ≤ s) :
     change (hLp _ hb i.val.2.2.2).toLp _ = u i at hij
     exact (hlower _ hb).trans_eq ((congrArg (fun n ↦ ‖(hLp _ hb n).toLp _‖) hk.symm).trans
       (congrArg norm hij))
-  refine ⟨S,hiS,?_⟩
+  refine ⟨S,hiS,hsupp,?_⟩
   change Real.exp _ ≤ D/d * (‖u i‖ * finiteGramCoordinate u i S)
   rw [← hq]
   calc _ ≤ D * ‖q‖ := he
        _ = D/d * (d * ‖q‖) := by field_simp
        _ ≤ _ := by gcongr
+
+/-- On the rational trivial character, the logarithmic neighbour cost of any
+high zero is bounded by a single actual finite Gram coordinate of its zeroth
+jet. The constant is uniform in height, the center, and the basepoint choice. -/
+theorem rational_zeroth_gram_cluster_lower {s : ℝ} (hs : 0 ≤ s) :
+    ∃ C : ℝ, 0 < C ∧ ∀ (χ : PontryaginDual C₁ → PontryaginDual Cℚ),
+      IsSpectralBasepointChoice χ → χ 1 = 1 → ∀ i : J(χ,s),
+      i.val.1 = 1 → i.val.2.2.2 = 0 → 2 ≤ |(point(i)).im| →
+      ∃ S : Finset (J(χ,s)), i ∈ S ∧
+        let u (j : J(χ,s)) := (spectralStripJet_memLp χ (by norm_num : (0:ℝ) ≤ 1) hs j).toLp (jet(χ,j))
+        Real.exp (zetaClusterCost (point(i)) (1/4)) ≤
+          C * (‖u i‖ * finiteGramCoordinate u i S) := by
+  obtain ⟨C,hC,h⟩ := rational_zeroth_gram_cluster_lower_supported hs
+  refine ⟨C,hC,fun χ hχ hχ1 i hi hk ht ↦ ?_⟩
+  obtain ⟨S,hiS,_,hS⟩ := h χ hχ hχ1 i hi hk ht
+  exact ⟨S,hiS,hS⟩
 
 /-- The exact central order in Jensen's formula contributes a factor of
 four to the power of the multiplicity on the quarter-circle. -/
