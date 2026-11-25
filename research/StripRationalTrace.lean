@@ -120,6 +120,60 @@ private theorem rational_site_count (χ : PontryaginDual C₁ → PontryaginDual
     (by rw [← hd]; exact_mod_cast Int.toNat_of_nonneg (hp z).le)
 
 set_option maxHeartbeats 1600000 in
+/-- A polynomial coordinate bound on selected sites gives the Mellin-weighted
+sum over those sites, uniformly in the full ambient Gram block. -/
+theorem rational_convolution_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ s)
+    (χ : PontryaginDual C₁ → PontryaginDual Cℚ) (hχ1 : χ 1 = 1) (φ : BruhatCompactSupport Cℚ)
+    (P : Z(χ) → Prop) {C : ℝ} (hC : 0 ≤ C) (p : ℕ) :
+    let u (i : J(χ,s)) := (spectralStripJet_memLp χ (by norm_num : (0:ℝ) ≤ 1) hs i).toLp (raw(χ,i))
+    let j (z : Z(χ)) (m : Fin (N(χ,s,z))) : J(χ,s) := ⟨(1, z.val.1, z.val.2, m.val), m.isLt⟩
+    (∀ z, P z → ∀ m : Fin (N(χ,s,z)), ∀ S : Finset (J(χ,s)),
+      ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤ C*(10+|z.val.2|)^p) →
+    ∃ B : ℝ, ∀ (T : Finset (Z(χ))) (w : Z(χ) → ℂ) (S : Finset (J(χ,s))),
+      (∀ z ∈ T, P z) →
+      (∀ z ∈ T, w z ∈ Metric.sphere (shift(z.val.1,z.val.2)) (2*Real.exp ((4+s)/2))) →
+      ∑ z ∈ T, ‖∫ g : Cℚ, φ.val g * ideleClassNormTwist (χ 1) (w z) g ∂ideleClassTamagawaMeasure ℚ‖ *
+        ∑ m, ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤ B := by
+  intro u j hGram
+  let R := 2*Real.exp ((4+s)/2)
+  obtain ⟨L,hL,hcircle⟩ := rational_mellin_circle_bound φ R (by dsimp [R]; positivity) (p+2) (by omega)
+  let f (z : Z(χ)) : ℝ := (N(χ,s,z) : ℝ) / (1+|z.val.2|)^2
+  have hf : Summable f := rational_site_count χ hχ1 s
+  refine ⟨(C*L) * ∑' z, f z, fun T w S hT hw ↦ ?_⟩
+  calc
+    _ ≤ ∑ z ∈ T, (C*L) * f z := by
+      apply Finset.sum_le_sum
+      intro z hz
+      let H := 10+|z.val.2|
+      let q := ‖nuclearityTestMellin zetaχ φ (w z)‖
+      have hq : 0 ≤ q := norm_nonneg _
+      have hH : 0 < H := by dsimp [H]; positivity
+      have hM := hcircle (shift(z.val.1,z.val.2)) (w z) (by simpa [abs_le] using z.property.1) (hw z hz)
+      have hpow : q * H^(p+2) ≤ L := by simpa [q,H] using hM
+      have hsum : ∑ m : Fin (N(χ,s,z)), ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤
+          (N(χ,s,z) : ℝ) * (C*H^p) := by
+        calc _ ≤ ∑ _m : Fin (N(χ,s,z)), C*H^p :=
+                Finset.sum_le_sum fun m _ ↦ hGram z (hT z hz) m S
+             _ = _ := by simp
+      have heval : ‖∫ g : Cℚ, φ.val g * ideleClassNormTwist (χ 1) (w z) g ∂ideleClassTamagawaMeasure ℚ‖ = q := by
+        rw [hχ1]; rfl
+      rw [heval]
+      apply (mul_le_mul_of_nonneg_left hsum hq).trans
+      have hsmall : (1+|z.val.2|)^2 ≤ H^2 := by dsimp [H]; gcongr; norm_num
+      have hscaled : q * H^p * (1+|z.val.2|)^2 ≤ L :=
+        (mul_le_mul_of_nonneg_left hsmall (mul_nonneg hq (pow_nonneg hH.le _))).trans
+          (by rwa [mul_assoc, ← pow_add])
+      change q * ((N(χ,s,z) : ℝ) * (C*H^p)) ≤ (C*L) * ((N(χ,s,z) : ℝ) / (1+|z.val.2|)^2)
+      rw [← mul_div_assoc, le_div_iff₀ (by positivity)]
+      calc _ = (C * (N(χ,s,z) : ℝ)) * (q * H^p * (1+|z.val.2|)^2) := by ring
+           _ ≤ _ := by
+             rw [mul_right_comm C L]
+             exact mul_le_mul_of_nonneg_left hscaled (mul_nonneg hC (Nat.cast_nonneg _))
+    _ = (C*L) * ∑ z ∈ T, f z := by rw [Finset.mul_sum]
+    _ ≤ _ := mul_le_mul_of_nonneg_left (hf.sum_le_tsum T fun z _ ↦ by dsimp [f]; positivity)
+      (mul_nonneg hC hL)
+
+set_option maxHeartbeats 1600000 in
 /-- Theorem 10.3.2.1(1), pp. 453–455, rational trivial component of #7455.
 Under the first-coefficient hypothesis, one constant bounds the Mellin-weighted
 sum over every finite set of sites, every choice of points on the prescribed
@@ -136,44 +190,9 @@ theorem rational_convolution_finiteGram_bound {b : ℝ} (hb : 0 < b) (A : ℕ)
       ∑ z ∈ T, ‖∫ g : Cℚ, φ.val g * ideleClassNormTwist (χ 1) (w z) g ∂ideleClassTamagawaMeasure ℚ‖ *
         ∑ m, ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤ B := by
   intro u j
-  let p := 6*A+30
-  let R := 2*Real.exp ((4+s)/2)
   obtain ⟨C,hC,hGram⟩ := rational_finiteGram_polynomial hb A hζ hs χ hχ hχ1
-  obtain ⟨L,hL,hcircle⟩ := rational_mellin_circle_bound φ R (by dsimp [R]; positivity) (p+2) (by omega)
-  let f (z : Z(χ)) : ℝ := (N(χ,s,z) : ℝ) / (1+|z.val.2|)^2
-  have hf : Summable f := rational_site_count χ hχ1 s
-  refine ⟨(C*L) * ∑' z, f z, fun T w S hw ↦ ?_⟩
-  calc
-    _ ≤ ∑ z ∈ T, (C*L) * f z := by
-      apply Finset.sum_le_sum
-      intro z hz
-      let H := 10+|z.val.2|
-      let q := ‖nuclearityTestMellin zetaχ φ (w z)‖
-      have hq : 0 ≤ q := norm_nonneg _
-      have hH : 0 < H := by dsimp [H]; positivity
-      have hM := hcircle (shift(z.val.1,z.val.2)) (w z) (by simpa [abs_le] using z.property.1) (hw z hz)
-      have hpow : q * H^(p+2) ≤ L := by simpa [q,H] using hM
-      have hsum : ∑ m : Fin (N(χ,s,z)), ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤
-          (N(χ,s,z) : ℝ) * (C*H^p) := by
-        calc _ ≤ ∑ _m : Fin (N(χ,s,z)), C*H^p :=
-                Finset.sum_le_sum fun m _ ↦ hGram (j z m) rfl S
-             _ = _ := by simp
-      have heval : ‖∫ g : Cℚ, φ.val g * ideleClassNormTwist (χ 1) (w z) g ∂ideleClassTamagawaMeasure ℚ‖ = q := by
-        rw [hχ1]; rfl
-      rw [heval]
-      apply (mul_le_mul_of_nonneg_left hsum hq).trans
-      have hsmall : (1+|z.val.2|)^2 ≤ H^2 := by dsimp [H]; gcongr; norm_num
-      have hscaled : q * H^p * (1+|z.val.2|)^2 ≤ L :=
-        (mul_le_mul_of_nonneg_left hsmall (mul_nonneg hq (pow_nonneg hH.le _))).trans
-          (by rwa [mul_assoc, ← pow_add])
-      change q * ((N(χ,s,z) : ℝ) * (C*H^p)) ≤ (C*L) * ((N(χ,s,z) : ℝ) / (1+|z.val.2|)^2)
-      rw [← mul_div_assoc, le_div_iff₀ (by positivity)]
-      calc _ = (C * (N(χ,s,z) : ℝ)) * (q * H^p * (1+|z.val.2|)^2) := by ring
-           _ ≤ _ := by
-             rw [mul_right_comm C L]
-             exact mul_le_mul_of_nonneg_left hscaled (mul_nonneg hC.le (Nat.cast_nonneg _))
-    _ = (C*L) * ∑ z ∈ T, f z := by rw [Finset.mul_sum]
-    _ ≤ _ := mul_le_mul_of_nonneg_left (hf.sum_le_tsum T fun z _ ↦ by dsimp [f]; positivity)
-      (mul_nonneg hC.le hL)
+  obtain ⟨B,hB⟩ := rational_convolution_finiteGram_bound_on hs χ hχ1 φ (fun _ ↦ True)
+    hC.le (6*A+30) (fun z _ m S ↦ hGram (j z m) rfl S)
+  exact ⟨B, fun T w S ↦ hB T w S (by simp)⟩
 
 end MasulloResearch.StripRadial

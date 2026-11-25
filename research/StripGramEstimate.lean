@@ -102,7 +102,7 @@ theorem inner_strip_jet_norm_bound :
 set_option maxHeartbeats 800000 in
 /-- The normalized finite Gram coordinate is bounded by the product of the
 physical jet norm and the norm of any physical cardinal witness. -/
-private theorem gram_le_jet_mul_witness (χ : PontryaginDual C₁ → PontryaginDual Cℚ)
+theorem gram_le_jet_mul_witness (χ : PontryaginDual C₁ → PontryaginDual Cℚ)
     (hχ : IsSpectralBasepointChoice χ) {s : ℝ} (hs : 0 ≤ s)
     (i : SpectralStripJetIndex χ (1/2) 1 s) (S : Finset (SpectralStripJetIndex χ (1/2) 1 s))
     (y : CompactIntervalSobolev (ideleClassTamagawaMeasure ℚ) (logIdeleClassNorm ℚ) (-1) 1 s) :

@@ -87,34 +87,25 @@ theorem rational_strip_jet_order
   rw [← hm]
   exact_mod_cast Nat.ne_of_gt (Nat.zero_le _ |>.trans_lt hindex)
 
-/-- On the rational trivial component, a lower bound for ordinary zeta coefficients
-gives physical cardinal witnesses at every retained high jet. The pairing tests
-all admitted jets, including low ones and those of other characters. -/
-theorem exists_rational_physical_zeta_witnesses {b : ℝ} (hb : 0 < b) (A : ℕ)
-    (hζ : ∀ w : ℂ, 1 ≤ |w.im| → riemannZeta w = 0 → ∀ n : ℕ,
-      analyticOrderAt riemannZeta w = n → b / (2 + |w.im|) ^ A ≤ ‖taylorCoeff riemannZeta w n‖) :
-    ∃ K : ℝ, 0 < K ∧ ∀ (χ : PontryaginDual C₁ → PontryaginDual Cℚ), IsSpectralBasepointChoice χ →
-      χ 1 = 1 → ∀ (s : ℝ) (hs : 0 ≤ s) (i : SpectralStripJetIndex χ (1/2) 1 s),
-      i.val.1 = 1 → 2 ≤ |i.val.2.2.1| →
-      let u := fun j : SpectralStripJetIndex χ (1/2) 1 s ↦
-        (spectralStripJet_memLp χ (by norm_num : (0 : ℝ) ≤ 1) hs j).toLp (jet(χ, j))
-      ∃ y : CompactIntervalSobolev (ideleClassTamagawaMeasure ℚ) (logIdeleClassNorm ℚ) (-1) 1 s,
-        (∀ j, spectralSobolevPairing y (u j) = if j = i then 1 else 0) ∧
-        (normOneIdeleClassTamagawaMeasure ℚ).real univ * ‖y‖^2 ≤
-          (K * (10 + |i.val.2.2.1|)^(5*A+25) / (2 * i.val.2.2.2.factorial))^2 *
-            ∫ t, sobolevKernel s t ∧
-        1 / ‖y‖ ≤ Metric.infDist (u i) (Submodule.span ℂ (u '' {j | j ≠ i}) : Set _) := by
-  obtain ⟨K, hK, hrad⟩ := exists_zeta_radial_witnesses hb A hζ
-  refine ⟨K, hK, fun χ hχ hχ1 s hs i hi ht ↦ ?_⟩
-  intro u
-  obtain ⟨hiStrip, hiz, m, hm, hiOrder⟩ := rational_strip_jet_order hχ1 i hi
-  have him : (point(i)).im = i.val.2.2.1 := by simp
-  obtain ⟨p, hf, hp, hnorm, hjets, hothers⟩ := hrad (point(i)) ⟨hiStrip.1.le, hiStrip.2.le⟩
-    (by rwa [him]) hiz m hm _ hiOrder s
-  have hc : point(i) - 1/2 = site(i) := add_sub_cancel_right ..
-  rw [hc] at hjets hothers
-  let M (v : ℂ) := ∫ t : ℝ, Complex.exp ((v + site(i)) * t) * p t
-  obtain ⟨y, hny, hy⟩ := exists_physical_cardinal_of_radial χ hχ hs i p hp hf (site(i)) (by
+/-- Lift a radial interpolant at a rational site. Vanishing to the ordinary
+zeta orders makes it orthogonal to all other retained jets on this character.
+The angular lift treats all other characters. -/
+theorem rational_physical_cardinal_of_radial (χ : PontryaginDual C₁ → PontryaginDual Cℚ)
+    (hχ : IsSpectralBasepointChoice χ) (hχ1 : χ 1 = 1) {s : ℝ} (hs : 0 ≤ s)
+    (i : SpectralStripJetIndex χ (1/2) 1 s) (hi : i.val.1 = 1)
+    {m : ℕ} (hm : analyticOrderAt riemannZeta (point(i)) = m)
+    (p : ℝ → ℂ) (hp : Continuous p) (hf : MemLp p 2 (radialMeasure s)) :
+    let M := fun v : ℂ ↦ ∫ t : ℝ, Complex.exp ((v + site(i)) * t) * p t
+    (∀ j < m, iteratedDeriv j M 0 = if j = i.val.2.2.2 then 1 else 0) →
+    (∀ w : ℂ, w.re ∈ Icc (0 : ℝ) 1 → w ≠ point(i) → w ≠ 1 →
+      analyticOrderAt riemannZeta w ≤ analyticOrderAt M (w - point(i))) →
+    ∃ y : CompactIntervalSobolev (ideleClassTamagawaMeasure ℚ) (logIdeleClassNorm ℚ) (-1) 1 s,
+      ‖y‖ = ‖hf.toLp p‖ / Real.sqrt ((normOneIdeleClassTamagawaMeasure ℚ).real univ) ∧
+      ∀ j : SpectralStripJetIndex χ (1/2) 1 s, spectralSobolevPairing y
+        ((spectralStripJet_memLp χ (by norm_num : (0 : ℝ) ≤ 1) hs j).toLp (jet(χ, j))) =
+        if j = i then 1 else 0 := by
+  intro M hjets hothers
+  exact exists_physical_cardinal_of_radial χ hχ hs i p hp hf (site(i)) (by
     intro j hω
     obtain ⟨hband, -⟩ := rational_strip_jet_order hχ1 j (hω.trans hi)
     simp at hband ⊢
@@ -147,6 +138,35 @@ theorem exists_rational_physical_zeta_witnesses {b : ℝ} (hb : 0 < b) (A : ℕ)
       have hji : j ≠ i := fun e ↦ he (e ▸ rfl)
       rw [ite_eq_right hji]
       exact (natCast_le_analyticOrderAt_iff_iteratedDeriv_eq_zero han).mp hoM _ (Nat.lt_succ_self _))
+
+/-- On the rational trivial component, a lower bound for ordinary zeta coefficients
+gives physical cardinal witnesses at every retained high jet. The pairing tests
+all admitted jets, including low ones and those of other characters. -/
+theorem exists_rational_physical_zeta_witnesses {b : ℝ} (hb : 0 < b) (A : ℕ)
+    (hζ : ∀ w : ℂ, 1 ≤ |w.im| → riemannZeta w = 0 → ∀ n : ℕ,
+      analyticOrderAt riemannZeta w = n → b / (2 + |w.im|) ^ A ≤ ‖taylorCoeff riemannZeta w n‖) :
+    ∃ K : ℝ, 0 < K ∧ ∀ (χ : PontryaginDual C₁ → PontryaginDual Cℚ), IsSpectralBasepointChoice χ →
+      χ 1 = 1 → ∀ (s : ℝ) (hs : 0 ≤ s) (i : SpectralStripJetIndex χ (1/2) 1 s),
+      i.val.1 = 1 → 2 ≤ |i.val.2.2.1| →
+      let u := fun j : SpectralStripJetIndex χ (1/2) 1 s ↦
+        (spectralStripJet_memLp χ (by norm_num : (0 : ℝ) ≤ 1) hs j).toLp (jet(χ, j))
+      ∃ y : CompactIntervalSobolev (ideleClassTamagawaMeasure ℚ) (logIdeleClassNorm ℚ) (-1) 1 s,
+        (∀ j, spectralSobolevPairing y (u j) = if j = i then 1 else 0) ∧
+        (normOneIdeleClassTamagawaMeasure ℚ).real univ * ‖y‖^2 ≤
+          (K * (10 + |i.val.2.2.1|)^(5*A+25) / (2 * i.val.2.2.2.factorial))^2 *
+            ∫ t, sobolevKernel s t ∧
+        1 / ‖y‖ ≤ Metric.infDist (u i) (Submodule.span ℂ (u '' {j | j ≠ i}) : Set _) := by
+  obtain ⟨K, hK, hrad⟩ := exists_zeta_radial_witnesses hb A hζ
+  refine ⟨K, hK, fun χ hχ hχ1 s hs i hi ht ↦ ?_⟩
+  intro u
+  obtain ⟨hiStrip, hiz, m, hm, hiOrder⟩ := rational_strip_jet_order hχ1 i hi
+  have him : (point(i)).im = i.val.2.2.1 := by simp
+  obtain ⟨p, hf, hp, hnorm, hjets, hothers⟩ := hrad (point(i)) ⟨hiStrip.1.le, hiStrip.2.le⟩
+    (by rwa [him]) hiz m hm _ hiOrder s
+  have hc : point(i) - 1/2 = site(i) := add_sub_cancel_right ..
+  rw [hc] at hjets hothers
+  obtain ⟨y, hny, hy⟩ :=
+    rational_physical_cardinal_of_radial χ hχ hχ1 hs i hi hm p hp hf hjets hothers
   refine ⟨y, hy, ?_, one_div_norm_le_jet_infDist χ (by norm_num) hs i y hy⟩
   let c := (normOneIdeleClassTamagawaMeasure ℚ).real univ
   let : CompactSpace C₁ := (ideleClassGroup_finiteness ℚ).2.1
