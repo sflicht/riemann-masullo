@@ -53,7 +53,7 @@ For some fixed $A>0$, the simple zeros satisfying
 $$
 |\zeta'(\rho)|\ge (2+|\Im\rho|)^{-A}
 $$
-have lower limiting proportion at least $13/20$ among all positive-height nontrivial zeros counted with multiplicity. This follows from Lamzouri's unconditional isolation theorem, Titchmarsh's local product formula, and the Riemann–von Mangoldt count. The finite packing and derivative estimates in the deduction are proved in Lean. The asymptotic theorems are inputs from the literature. [Lamzouri, Theorem 1.1, especially (1.5)](https://arxiv.org/abs/2610.26841) · [Titchmarsh, Chapter IX](https://sites.math.rutgers.edu/~zeilberg/EM18/TitchmarshZeta.pdf) · [Finite packing and derivative estimates](StripZetaIsolated.lean)
+have lower limiting proportion at least $13/20$ among all positive-height nontrivial zeros counted with multiplicity. This follows from Lamzouri's unconditional isolation theorem, Titchmarsh's local product formula, and the Riemann–von Mangoldt count. The finite packing and derivative estimates in the deduction are proved in Lean. The asymptotic theorems are inputs from the literature. [Lamzouri, Theorem 1.1, the small-$c$ isolation bound](https://arxiv.org/abs/2610.26841) · [Titchmarsh, Chapter IX](https://sites.math.rutgers.edu/~zeilberg/EM18/TitchmarshZeta.pdf) · [Finite packing and derivative estimates](StripZetaIsolated.lean)
 
 Put $R=1/4$. Let $S$ be a finite set of zeros such that every center's ordinate differs from the ordinate of every other zero site by at least $\delta>0$. Write $Z$ for the set of zeros in the closed quarter-disks around these centers, with each center omitted from its own disk. Then
 $$
