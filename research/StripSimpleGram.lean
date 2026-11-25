@@ -189,12 +189,12 @@ local notation "N(" χ ", " s ", " z ")" => spectralStripMultiplicity 1 s (z).va
 local notation "J(" χ ", " s ")" => SpectralStripJetIndex χ (1/2) 1 s
 local notation "root(" z ")" => shift((z).val.1, (z).val.2) + 1/2
 
-/-- Each ordinary simple zero in the critical strip contributes one retained
-jet at its own ordinate on the rational trivial component. -/
-theorem rational_site_of_simple_zero (χ : PontryaginDual C₁ → PontryaginDual Cℚ)
+/-- Every zero in the open critical strip retains its full ordinary multiplicity
+at its own site on the rational trivial component. -/
+theorem rational_site_of_zero_order (χ : PontryaginDual C₁ → PontryaginDual Cℚ)
     (hχ1 : χ 1 = 1) (s : ℝ) {ρ : ℂ} (hρ : ρ.re ∈ Ioo (0:ℝ) 1)
-    (hm : analyticOrderAt riemannZeta ρ = 1) :
-    ∃ z : Z(χ), root(z) = ρ ∧ N(χ,s,z) = 1 := by
+    {m : ℕ} (hmpos : 0 < m) (hm : analyticOrderAt riemannZeta ρ = m) :
+    ∃ z : Z(χ), root(z) = ρ ∧ N(χ,s,z) = m := by
   let b := ρ.re - 1/2
   have hb : b ∈ Ioo (-1:ℝ) 1 := ⟨by dsimp [b]; linarith [hρ.1],by dsimp [b]; linarith [hρ.2]⟩
   have he : shift(1/2+b,ρ.im) = ρ := by apply Complex.ext <;> simp [b]
@@ -205,15 +205,23 @@ theorem rational_site_of_simple_zero (χ : PontryaginDual C₁ → PontryaginDua
   have ho := meromorphicOrderAt_finiteHeckeL_continuation (1 : PontryaginDual Cℚ) hmer
     (fun w ↦ by rw [finiteHeckeL_one_eq_dedekindZeta, dedekindZeta_rat_eq_riemannZeta w.property]) hρ.1
   rw [(analyticOn_riemannZeta ρ hne).meromorphicOrderAt_eq, hm] at ho
-  have hz : order(χ 1,shift(1/2+b,ρ.im)) = 1 := by
+  have hz : order(χ 1,shift(1/2+b,ρ.im)) = (m : ℤ) := by
     rw [hχ1,he]
     simpa using ho.symm
-  have hpos : 0 < order(χ 1,shift(1/2+b,ρ.im)) := hz ▸ (by decide : (0 : WithTop ℤ) < 1)
+  have hpos : 0 < order(χ 1,shift(1/2+b,ρ.im)) := hz ▸ (by exact_mod_cast hmpos : (0 : WithTop ℤ) < (m : ℤ))
   refine ⟨⟨(b,ρ.im),⟨hb.1.le,hb.2.le⟩,hpos⟩, ?_, ?_⟩
   · apply Complex.ext <;> simp [b]
-  · change spectralStripMultiplicity 1 s b _ = 1
+  · change spectralStripMultiplicity 1 s b _ = m
     rw [spectralStripMultiplicity_interior hb, hz]
-    rfl
+    simp
+
+/-- Each ordinary simple zero in the critical strip contributes one retained
+jet at its own ordinate on the rational trivial component. -/
+theorem rational_site_of_simple_zero (χ : PontryaginDual C₁ → PontryaginDual Cℚ)
+    (hχ1 : χ 1 = 1) (s : ℝ) {ρ : ℂ} (hρ : ρ.re ∈ Ioo (0:ℝ) 1)
+    (hm : analyticOrderAt riemannZeta ρ = 1) :
+    ∃ z : Z(χ), root(z) = ρ ∧ N(χ,s,z) = 1 :=
+  rational_site_of_zero_order χ hχ1 s hρ (by decide : 0 < 1) hm
 
 set_option maxHeartbeats 1000000 in
 /-- At the simple high sites with a polynomial lower derivative bound, the

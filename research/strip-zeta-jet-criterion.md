@@ -63,7 +63,7 @@ $$
 
 Fix a source zero $\nu$ and look at the centers to which it contributes. Within distance $r$ there are at most $r/\delta$ on either side of its ordinate. The first is at least $\delta$ away and the rest have successive gaps at least $\delta$. Complex distance dominates ordinate distance, so the bound also covers off-line sources. Integrating $2r/\delta$ against $dr/r$ up to $R$ gives a total charge of at most $2R/\delta$ per unit of source multiplicity. Interchanging the finite sums proves the inequality.
 
-For the density deduction, choose $c>0$ so that Lamzouri's lower limiting isolated proportion is $p>13/20$. Take his isolated ordinates between $\sqrt X$ and $X$, with $\delta=2\pi c/\log X$. These zeros are simple, and deleting the lower ordinates costs $o(N(X))$. Their source multiplicity is at most $N(X+1)\sim N(X)$. For fixed $K>0$, at most $(1+o(1))N(X)/(4\pi cK)$ centers can have $J_\rho>K\log X$. Choose $K$ so that $1/(4\pi cK)<p-13/20$. By the local product estimate above, all the remaining centers satisfy $\log|\zeta'(\rho)|\ge -(K+D)\log X$ for a fixed $D>0$. Since $\Im\rho\ge\sqrt X$, one exponent $A=2(K+D)$ works in terms of the zero's own height. The conclusion concerns the coefficient on this subfamily. The finite Gram estimate in #7455 still requires control across the full component.
+For the density deduction, choose $c>0$ so that Lamzouri's lower limiting isolated proportion is $p>13/20$. Take his isolated ordinates between $\sqrt X$ and $X$, with $\delta=2\pi c/\log X$. These zeros are simple, and deleting the lower ordinates costs $o(N(X))$. Their source multiplicity is at most $N(X+1)\sim N(X)$. For fixed $K>0$, at most $(1+o(1))N(X)/(4\pi cK)$ centers can have $J_\rho>K\log X$. Choose $K$ so that $1/(4\pi cK)<p-13/20$. By the local product estimate above, all the remaining centers satisfy $\log|\zeta'(\rho)|\ge -(K+D)\log X$ for a fixed $D>0$. Since $\Im\rho\ge\sqrt X$, one exponent $A=2(K+D)$ works in terms of the zero's own height. The conclusion concerns the coefficient on this subfamily. The unrestricted sum in #7455 still requires control across the full component.
 
 ## Gram bounds at simple zeros
 
@@ -80,6 +80,20 @@ $$
 All other zeros retain their full orders. On the lines used for Mellin inversion, $|v|\ge1$. The established envelope for $F_\rho$ costs a fifth power of height. Since $F_\rho'(0)=(\rho-1)\zeta'(\rho)$ and $10+|\Im\rho|\le6|\rho-1|$ at these heights, the physical witness costs only a fourth power times $1/|\zeta'(\rho)|$.
 
 Two finite-sum estimates follow in Lean. First, the Mellin-weighted sum in (10.3.2.7) stays uniformly bounded when each simple high row is weighted by $|\zeta'(\rho)|$, across all such rows. Second, the original row weights suffice on the subfamily where $|\zeta'(\rho)|\ge b(2+|\Im\rho|)^{-A}$. The second result and the density argument above give the original bound restricted to a set of lower limiting proportion at least $13/20$ among the positive-height nontrivial zeros. Both sums are uniform in the finite selection, the circle samples and the entire ambient Gram block. The pointwise and finite-sum implications are formalized. The density input uses the external results cited above. The unrestricted sum with the manuscript's weights remains open. [Finite-sum theorems](StripSimpleGram.lean)
+
+## A necessary lower bound on one finite Gram block
+
+Keep the same rational component and fix $s\ge0$. At any nontrivial zero $\rho$ of height at least two, including a repeated zero, take its zeroth jet. Form $S_\rho$ from that jet and all retained jets at every other zeta zero in the closed disk of radius $1/4$. With $J_\rho$ as in (2), Lean proves unconditionally that
+$$
+e^{J_\rho}\le C_s Q_\rho(S_\rho).
+$$
+One finite block thus detects the combined effect of all the neighboring zeros, with their full multiplicities. The inverse Gram column gives a vector $q$ of norm exactly equal to the Gram coordinate. Pairing $q$ with the exponential jet at a variable point gives a holomorphic function which is one at $\rho$ and vanishes to the required orders at the neighbors. Its modulus on the quarter-circle is bounded by a constant times $\|q\|$. Jensen's formula gives the displayed inequality. [Finite-block lower bound](StripGramConverse.lean) · [Mellin pairing and contour estimates](StripInteriorMellin.lean)
+
+Write $a_\rho=\zeta^{(m_\rho)}(\rho)/m_\rho!$. The exact Jensen identity gives $e^{J_\rho}|a_\rho|=4^{m_\rho}\exp(\operatorname{avg}_{|z-\rho|=1/4}\log|\zeta(z)|)$. If the circle mean is at least $-B\log T_\rho$, the same block satisfies
+$$
+4^{m_\rho} T_\rho^{-B} \le C_s Q_\rho(S_\rho)|a_\rho|.
+$$
+At a simple zero this is the reciprocal-derivative lower bound. Together with the upper bound on every block, it pins down the worst finite-block coordinate up to a power of height. For general multiplicity, even a uniform polynomial bound for just the zeroth rows forces (1). The existing interpolation theorem then bounds all retained derivative orders. These implications are formalized with the quarter-circle mean stated explicitly. The classical fixed-window local product estimate above supplies that mean on paper. Proving (1) uniformly at exceptional clusters remains open. [Coefficient converse and simple-zero two-sided estimate](StripGramConverse.lean)
 
 ## Uniform reduction to a shrinking disk
 
@@ -165,10 +179,10 @@ For simple zeros, (1) becomes a polynomial lower bound for $|\zeta'(\rho)|$. In 
 From the root of the fork, build the imported project modules and check the research files in dependency order.
 
 ```sh
-lake build $(awk '$1 == "import" && $2 !~ /^research[.]/ {print $2}' research/Strip*.lean | sort -u)
+lake build $(awk '($1 == "import" || ($1 == "public" && $2 == "import")) && $NF ~ /^(Mathlib|RiemannMasullo)[.]/ {print $NF}' research/Strip*.lean | sort -u)
 research_out=.lake/build/lib/lean/research
 mkdir -p "$research_out"
-for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated StripSimpleGram
+for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated StripSimpleGram StripInteriorMellin StripGramConverse
 do
   lake env lean -DmaxSynthPendingDepth=3 -DautoImplicit=false -DrelaxedAutoImplicit=false -DwarningAsError=true -o "$research_out/$name.olean" "research/$name.lean" || exit 1
 done
