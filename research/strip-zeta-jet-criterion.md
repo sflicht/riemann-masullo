@@ -65,6 +65,22 @@ Fix a source zero $\nu$ and look at the centers to which it contributes. Within 
 
 For the density deduction, choose $c>0$ so that Lamzouri's lower limiting isolated proportion is $p>13/20$. Take his isolated ordinates between $\sqrt X$ and $X$, with $\delta=2\pi c/\log X$. These zeros are simple, and deleting the lower ordinates costs $o(N(X))$. Their source multiplicity is at most $N(X+1)\sim N(X)$. For fixed $K>0$, at most $(1+o(1))N(X)/(4\pi cK)$ centers can have $J_\rho>K\log X$. Choose $K$ so that $1/(4\pi cK)<p-13/20$. By the local product estimate above, all the remaining centers satisfy $\log|\zeta'(\rho)|\ge -(K+D)\log X$ for a fixed $D>0$. Since $\Im\rho\ge\sqrt X$, one exponent $A=2(K+D)$ works in terms of the zero's own height. The conclusion concerns the coefficient on this subfamily. The finite Gram estimate in #7455 still requires control across the full component.
 
+## Gram bounds at simple zeros
+
+For $F=\mathbf Q$, $a=1/2$, $\alpha=1$, and the trivial representative, fix $s\ge0$. Let $u_\rho$ be the zeroth jet at an ordinary simple zero $\rho$ of height at least two. Write $Q_\rho(S)$ for its norm times its finite Gram coordinate in a finite set $S$ of ambient jets. There is a constant $C_s$ such that
+$$
+Q_\rho(S)\,|\zeta'(\rho)|\le C_s(10+|\Im\rho|)^4 .
+$$
+The set $S$ may include arbitrary jets at other characters or at repeated zeros. Each ordinary simple zero in the critical strip corresponds to a rational spectral site with exactly one retained jet. [Coordinate estimate and site identification](StripSimpleGram.lean)
+
+To construct the separating functional, use the local variable $v$ around the selected zero. Set $F_\rho(v)=(\rho+v-1)\zeta(\rho+v)/(1+v/4)^7$ with the pole removed, and use the interpolant
+$$
+H_\rho(v)=\frac{F_\rho(v)}{v F_\rho'(0)},\qquad H_\rho(0)=1 .
+$$
+All other zeros retain their full orders. On the lines used for Mellin inversion, $|v|\ge1$. The established envelope for $F_\rho$ costs a fifth power of height. Since $F_\rho'(0)=(\rho-1)\zeta'(\rho)$ and $10+|\Im\rho|\le6|\rho-1|$ at these heights, the physical witness costs only a fourth power times $1/|\zeta'(\rho)|$.
+
+Two finite-sum estimates follow in Lean. First, the Mellin-weighted sum in (10.3.2.7) stays uniformly bounded when each simple high row is weighted by $|\zeta'(\rho)|$, across all such rows. Second, the original row weights suffice on the subfamily where $|\zeta'(\rho)|\ge b(2+|\Im\rho|)^{-A}$. The second result and the density argument above give the original bound restricted to a set of lower limiting proportion at least $13/20$ among the positive-height nontrivial zeros. Both sums are uniform in the finite selection, the circle samples and the entire ambient Gram block. The pointwise and finite-sum implications are formalized. The density input uses the external results cited above. The unrestricted sum with the manuscript's weights remains open. [Finite-sum theorems](StripSimpleGram.lean)
+
 ## Uniform reduction to a shrinking disk
 
 For $L=\log(2+|\Im\rho|)\ge2$, put $r_0=L^{-2}$ and define $J_\rho(r)=\sum_{0<|\nu-\rho|<r}m_\nu\log(r/|\nu-\rho|)$. Suppose the multiplicity count of other zeros inside distance $r$ is at most $C(rL+L/\log L)$ for $r_0\le r\le1/4$. Integrating over these radii gives
@@ -152,7 +168,7 @@ From the root of the fork, build the imported project modules and check the rese
 lake build $(awk '$1 == "import" && $2 !~ /^research[.]/ {print $2}' research/Strip*.lean | sort -u)
 research_out=.lake/build/lib/lean/research
 mkdir -p "$research_out"
-for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated
+for name in StripJetInterpolation StripRadialRealization StripPhysicalPairing StripZetaRadius StripZetaGrowth StripZetaCardinal StripRationalChart StripGramEstimate StripRationalTrace StripZetaClustering StripZetaIsolated StripSimpleGram
 do
   lake env lean -DmaxSynthPendingDepth=3 -DautoImplicit=false -DrelaxedAutoImplicit=false -DwarningAsError=true -o "$research_out/$name.olean" "research/$name.lean" || exit 1
 done

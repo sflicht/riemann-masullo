@@ -120,20 +120,20 @@ private theorem rational_site_count (χ : PontryaginDual C₁ → PontryaginDual
     (by rw [← hd]; exact_mod_cast Int.toNat_of_nonneg (hp z).le)
 
 set_option maxHeartbeats 1600000 in
-/-- A polynomial coordinate bound on selected sites gives the Mellin-weighted
-sum over those sites, uniformly in the full ambient Gram block. -/
-theorem rational_convolution_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ s)
+/-- A polynomial bound on weighted coordinates at selected sites gives the
+Mellin-weighted sum over those sites, uniformly in the full ambient Gram block. -/
+theorem rational_convolution_weighted_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ s)
     (χ : PontryaginDual C₁ → PontryaginDual Cℚ) (hχ1 : χ 1 = 1) (φ : BruhatCompactSupport Cℚ)
-    (P : Z(χ) → Prop) {C : ℝ} (hC : 0 ≤ C) (p : ℕ) :
+    (P : Z(χ) → Prop) (weight : Z(χ) → ℝ) {C : ℝ} (hC : 0 ≤ C) (p : ℕ) :
     let u (i : J(χ,s)) := (spectralStripJet_memLp χ (by norm_num : (0:ℝ) ≤ 1) hs i).toLp (raw(χ,i))
     let j (z : Z(χ)) (m : Fin (N(χ,s,z))) : J(χ,s) := ⟨(1, z.val.1, z.val.2, m.val), m.isLt⟩
     (∀ z, P z → ∀ m : Fin (N(χ,s,z)), ∀ S : Finset (J(χ,s)),
-      ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤ C*(10+|z.val.2|)^p) →
+      (‖u (j z m)‖ * finiteGramCoordinate u (j z m) S) * weight z ≤ C*(10+|z.val.2|)^p) →
     ∃ B : ℝ, ∀ (T : Finset (Z(χ))) (w : Z(χ) → ℂ) (S : Finset (J(χ,s))),
       (∀ z ∈ T, P z) →
       (∀ z ∈ T, w z ∈ Metric.sphere (shift(z.val.1,z.val.2)) (2*Real.exp ((4+s)/2))) →
       ∑ z ∈ T, ‖∫ g : Cℚ, φ.val g * ideleClassNormTwist (χ 1) (w z) g ∂ideleClassTamagawaMeasure ℚ‖ *
-        ∑ m, ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤ B := by
+        ∑ m, (‖u (j z m)‖ * finiteGramCoordinate u (j z m) S) * weight z ≤ B := by
   intro u j hGram
   let R := 2*Real.exp ((4+s)/2)
   obtain ⟨L,hL,hcircle⟩ := rational_mellin_circle_bound φ R (by dsimp [R]; positivity) (p+2) (by omega)
@@ -150,7 +150,7 @@ theorem rational_convolution_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ s)
       have hH : 0 < H := by dsimp [H]; positivity
       have hM := hcircle (shift(z.val.1,z.val.2)) (w z) (by simpa [abs_le] using z.property.1) (hw z hz)
       have hpow : q * H^(p+2) ≤ L := by simpa [q,H] using hM
-      have hsum : ∑ m : Fin (N(χ,s,z)), ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤
+      have hsum : ∑ m : Fin (N(χ,s,z)), (‖u (j z m)‖ * finiteGramCoordinate u (j z m) S) * weight z ≤
           (N(χ,s,z) : ℝ) * (C*H^p) := by
         calc _ ≤ ∑ _m : Fin (N(χ,s,z)), C*H^p :=
                 Finset.sum_le_sum fun m _ ↦ hGram z (hT z hz) m S
@@ -172,6 +172,25 @@ theorem rational_convolution_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ s)
     _ = (C*L) * ∑ z ∈ T, f z := by rw [Finset.mul_sum]
     _ ≤ _ := mul_le_mul_of_nonneg_left (hf.sum_le_tsum T fun z _ ↦ by dsimp [f]; positivity)
       (mul_nonneg hC hL)
+
+set_option maxHeartbeats 1600000 in
+/-- A polynomial coordinate bound on selected sites gives the Mellin-weighted
+sum over those sites, uniformly in the full ambient Gram block. -/
+theorem rational_convolution_finiteGram_bound_on {s : ℝ} (hs : 0 ≤ s)
+    (χ : PontryaginDual C₁ → PontryaginDual Cℚ) (hχ1 : χ 1 = 1) (φ : BruhatCompactSupport Cℚ)
+    (P : Z(χ) → Prop) {C : ℝ} (hC : 0 ≤ C) (p : ℕ) :
+    let u (i : J(χ,s)) := (spectralStripJet_memLp χ (by norm_num : (0:ℝ) ≤ 1) hs i).toLp (raw(χ,i))
+    let j (z : Z(χ)) (m : Fin (N(χ,s,z))) : J(χ,s) := ⟨(1, z.val.1, z.val.2, m.val), m.isLt⟩
+    (∀ z, P z → ∀ m : Fin (N(χ,s,z)), ∀ S : Finset (J(χ,s)),
+      ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤ C*(10+|z.val.2|)^p) →
+    ∃ B : ℝ, ∀ (T : Finset (Z(χ))) (w : Z(χ) → ℂ) (S : Finset (J(χ,s))),
+      (∀ z ∈ T, P z) →
+      (∀ z ∈ T, w z ∈ Metric.sphere (shift(z.val.1,z.val.2)) (2*Real.exp ((4+s)/2))) →
+      ∑ z ∈ T, ‖∫ g : Cℚ, φ.val g * ideleClassNormTwist (χ 1) (w z) g ∂ideleClassTamagawaMeasure ℚ‖ *
+        ∑ m, ‖u (j z m)‖ * finiteGramCoordinate u (j z m) S ≤ B := by
+  intro u j hGram
+  simpa only [mul_one] using rational_convolution_weighted_finiteGram_bound_on hs χ hχ1 φ P
+    (fun _ ↦ 1) hC p (fun z hz m S ↦ by simpa only [mul_one] using hGram z hz m S)
 
 set_option maxHeartbeats 1600000 in
 /-- Theorem 10.3.2.1(1), pp. 453–455, rational trivial component of #7455.
